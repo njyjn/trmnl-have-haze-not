@@ -69,18 +69,30 @@ has no shared file.
 **Home region** — which of NEA's five reporting regions drives the big number
 and the box on the map. Defaults to Central.
 
+TRMNL hands the custom field over as the option *label* (`West`), not a slug,
+so `src/shared.liquid` downcases it before looking up NEA's lowercase keys and
+falls back to Central if it still does not match. That fallback matters: a key
+that misses yields nil, every `nil <= n` comparison is false, and the band
+chain would otherwise run to its end and display **Hazardous** with a blank
+number — the most alarming possible reading, produced by no data at all.
+`tests/test_render.py` covers both cases.
+
 ## Development
 
 ```sh
 make serve    # live preview at http://localhost:4567
 make png      # render all four layouts to _build/*.png
-make test     # geometry + API contract tests
+make test     # geometry, API contract, and end-to-end render tests
 make check    # verify the live APIs still match what the templates read
 make lint     # TRMNL best-practice lint
 ```
 
 `make serve` polls the real APIs, so the preview shows live Singapore air
 quality.
+
+`make test` renders the plugin through `trmnlp` for the region-handling cases,
+so it needs Docker (or the gem). Those tests skip themselves when neither is
+available; the rest of the suite is pure Python.
 
 ### Regenerating the map
 

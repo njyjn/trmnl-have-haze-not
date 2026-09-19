@@ -1,15 +1,9 @@
 ---
-# Local dev-server config. Not uploaded to TRMNL.
 watch:
-  - .trmnlp.yml
-  - src
-
+- ".trmnlp.yml"
+- src
 custom_fields:
-  home_region: central
-
+  home_region: West
 framework_version: latest
 time_zone: Asia/Singapore
-
-# This plugin has no transform -- all derivation happens in Liquid so it runs
-# on any TRMNL plan.
 transform_runtime: disabled

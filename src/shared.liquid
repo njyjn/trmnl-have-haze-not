@@ -29,15 +29,27 @@
 {%- assign om = IDX_1.data -%}
 {%- assign om_sg = om[0] -%}
 
+{%- comment -%} ---------- home region ---------- {%- endcomment -%}
+{%- comment -%}
+  The custom field arrives as the option label ("West"), not the slug, so it
+  has to be downcased before it will match NEA's keys. An unrecognised value
+  must fall back rather than read as nil: every `nil <= n` comparison below is
+  false, which would walk the band chain to its end and report Hazardous with
+  a blank number -- the most alarming reading, from no data at all.
+{%- endcomment -%}
+{%- assign home_region = trmnl.plugin_settings.custom_fields_values.home_region | default: 'central' | downcase | strip -%}
+{%- assign home_psi = psi_all[home_region] -%}
+{%- unless home_psi -%}
+  {%- assign home_region = 'central' -%}
+  {%- assign home_psi = psi_all[home_region] -%}
+{%- endunless -%}
+{%- assign home_label = home_region | capitalize -%}
+
+{%- comment -%} ---------- availability ---------- {%- endcomment -%}
 {%- assign has_psi = false -%}
-{%- if psi_item.timestamp and psi_all -%}{%- assign has_psi = true -%}{%- endif -%}
+{%- if psi_item.timestamp and psi_all and home_psi -%}{%- assign has_psi = true -%}{%- endif -%}
 {%- assign has_forecast = false -%}
 {%- if om_sg.hourly.pm2_5 -%}{%- assign has_forecast = true -%}{%- endif -%}
-
-{%- comment -%} ---------- home region ---------- {%- endcomment -%}
-{%- assign home_region = trmnl.plugin_settings.custom_fields_values.home_region | default: 'central' -%}
-{%- assign home_label = home_region | capitalize -%}
-{%- assign home_psi = psi_all[home_region] -%}
 
 {%- comment -%}
   NEA PSI bands. Band drives both the headline wording and the halftone dot

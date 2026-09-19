@@ -1,0 +1,37 @@
+[
+  {
+    "name": "north",
+    "labelLocation": {
+      "latitude": 1.41803,
+      "longitude": 103.82
+    }
+  },
+  {
+    "name": "south",
+    "labelLocation": {
+      "latitude": 1.29587,
+      "longitude": 103.82
+    }
+  },
+  {
+    "name": "east",
+    "labelLocation": {
+      "latitude": 1.35735,
+      "longitude": 103.94
+    }
+  },
+  {
+    "name": "west",
+    "labelLocation": {
+      "latitude": 1.35735,
+      "longitude": 103.7
+    }
+  },
+  {
+    "name": "central",
+    "labelLocation": {
+      "latitude": 1.35735,
+      "longitude": 103.82
+    }
+  }
+]

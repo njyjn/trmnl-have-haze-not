@@ -1,0 +1,52 @@
+{%- comment -%} Top or bottom half of a stacked mashup: headline, regions, forecast. {%- endcomment -%}
+
+<div class="layout">
+  {%- if has_psi == false -%}
+    <div class="flex flex--col flex--center h--full">
+      <span class="title title--small">No air quality data</span>
+    </div>
+  {%- else -%}
+    <div class="columns gap--medium">
+      <div class="column w--32">
+        <div class="item">
+          <div class="content">
+            <span class="label label--small">PSI 24h &middot; {{ home_label }}</span>
+            <span class="value value--xxlarge value--tnums">{{ home_psi }}</span>
+            <span class="title title--small">{{ home_band_label }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="column">
+        <span class="label label--small">All regions</span>
+        <div class="flex flex--between gap--small">
+          {%- for layer in map_layers -%}
+            {%- assign rname = layer | split: '|' | first -%}
+            <div class="item item--shrink">
+              <div class="content">
+                <span class="label label--small">{{ rname | slice: 0, 1 | upcase }}</span>
+                <span class="value value--small value--tnums">{{ psi_all[rname] }}</span>
+              </div>
+            </div>
+          {%- endfor -%}
+        </div>
+
+        <div class="border--h-5"></div>
+
+        {%- if has_forecast -%}
+          <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
+          <svg class="aq-spark" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" height="{{ spark_h }}" preserveAspectRatio="none">
+            <polyline class="aq-spark__line" points="{{ spark_points }}"/>
+          </svg>
+        {%- else -%}
+          <span class="label label--small label--gray-out">Forecast unavailable</span>
+        {%- endif -%}
+      </div>
+    </div>
+  {%- endif -%}
+</div>
+
+<div class="title_bar">
+  <span class="title">Air Quality &middot; Singapore</span>
+  <span class="instance">NEA {{ psi_item.timestamp | date: '%-d %b %-l%P' }}</span>
+</div>

@@ -1,0 +1,119 @@
+{%- comment -%}
+  Full screen. Left column: halftone PSI map, its band legend, and the regional
+  cities. Right column: the headline reading, pollutants, and the 24h forecast.
+  Every variable used here is derived in shared.liquid, which TRMNL prepends
+  to this file.
+{%- endcomment -%}
+
+<div class="layout">
+  {%- if has_psi == false -%}
+    <div class="flex flex--col flex--center h--full">
+      <span class="title title--large">No air quality data</span>
+      <span class="description">data.gov.sg did not return a PSI reading</span>
+    </div>
+  {%- else -%}
+    <div class="columns gap--medium">
+
+      <div class="column aq-col--map">
+        {{ map_svg }}
+
+        {%- comment -%}
+          The legend is the only thing that makes dot size readable as a
+          number, so it sits directly under the map at the same dot sizes.
+        {%- endcomment -%}
+        <svg class="aq-legend" viewBox="0 0 430 30" width="100%" height="30">
+          {%- assign legend_labels = 'Good,Moderate,Unhealthy,V. unhealthy,Hazardous' | split: ',' -%}
+          {%- for lbl in legend_labels -%}
+            {%- assign lb = forloop.index -%}
+            {%- assign lr = lb | times: 7 | plus: 2 | divided_by: 10.0 -%}
+            {%- assign lx = forloop.index0 | times: 88 | plus: 8 -%}
+            <circle cx="{{ lx }}" cy="9" r="{{ lr }}"/>
+            <text x="{{ lx | plus: 8 }}" y="13">{{ lbl }}</text>
+          {%- endfor -%}
+          <text class="aq-legend__scale" x="0" y="28">PSI 0</text>
+          <text class="aq-legend__scale" x="88" y="28">51</text>
+          <text class="aq-legend__scale" x="176" y="28">101</text>
+          <text class="aq-legend__scale" x="264" y="28">201</text>
+          <text class="aq-legend__scale" x="352" y="28">301+</text>
+        </svg>
+
+        <div class="border--h-5"></div>
+
+        <span class="label label--small">Regional &middot; US AQI now</span>
+        <div class="flex flex--between gap--small">
+          {%- for city in om_cities -%}
+            <div class="item item--shrink">
+              <div class="content">
+                <span class="label label--small">{{ city_names[forloop.index0] }}</span>
+                <span class="value value--small value--tnums">{{ city.current.us_aqi }}</span>
+              </div>
+            </div>
+          {%- endfor -%}
+        </div>
+      </div>
+
+      <div class="column aq-col--side">
+        <div class="item">
+          <div class="content">
+            <span class="label label--small">PSI 24h &middot; {{ home_label }}</span>
+            <span class="value value--xxxlarge value--tnums">{{ home_psi }}</span>
+            <span class="title title--small">{{ home_band_label }}</span>
+            <span class="description description--base">{{ home_band_advice }}</span>
+          </div>
+        </div>
+
+        <div class="border--h-5"></div>
+
+        <div class="grid grid--cols-3 gap--small">
+          <div class="item item--shrink">
+            <div class="content">
+              <span class="label label--small">Dominant</span>
+              <span class="value value--small">{{ dom_name }}</span>
+            </div>
+          </div>
+          <div class="item item--shrink">
+            <div class="content">
+              <span class="label label--small">PM2.5</span>
+              <span class="value value--small value--tnums">{{ home_pm25 }}</span>
+            </div>
+          </div>
+          <div class="item item--shrink">
+            <div class="content">
+              <span class="label label--small">PM10</span>
+              <span class="value value--small value--tnums">{{ home_pm10 }}</span>
+            </div>
+          </div>
+        </div>
+        <span class="label label--small label--gray-out">24-hour average, &micro;g/m&sup3;</span>
+
+        <div class="border--h-5"></div>
+
+        {%- if has_forecast -%}
+          <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
+          <svg class="aq-spark" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" height="{{ spark_h }}" preserveAspectRatio="none">
+            {%- comment -%} NEA calls 1h PM2.5 above 55 elevated; show it when it is in range. {%- endcomment -%}
+            {%- if fc_min < 55 and fc_max > 55 -%}
+              {%- assign rule_y = 55 | minus: fc_min | times: spark_h | times: 1.0 | divided_by: fc_span -%}
+              {%- assign rule_y = spark_h | minus: rule_y | round: 1 -%}
+              <line class="aq-spark__rule" x1="0" y1="{{ rule_y }}" x2="{{ spark_w }}" y2="{{ rule_y }}"/>
+            {%- endif -%}
+            <polyline class="aq-spark__line" points="{{ spark_points }}"/>
+          </svg>
+          <div class="flex flex--between">
+            <span class="label label--small label--gray-out">now {{ fc_now | round }}</span>
+            <span class="label label--small label--gray-out">peak {{ fc_max | round }}</span>
+            <span class="label label--small label--gray-out">{{ fc_times | last | date: '%-l%P' }} {{ fc_end | round }}</span>
+          </div>
+        {%- else -%}
+          <span class="label label--small label--gray-out">Forecast unavailable</span>
+        {%- endif -%}
+      </div>
+
+    </div>
+  {%- endif -%}
+</div>
+
+<div class="title_bar">
+  <span class="title">Air Quality &middot; Singapore</span>
+  <span class="instance">NEA {{ psi_item.timestamp | date: '%-d %b %-l%P' }}</span>
+</div>

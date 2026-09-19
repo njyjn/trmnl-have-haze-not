@@ -1,0 +1,27 @@
+{%- comment -%} Left or right half of a side-by-side mashup: map on top, headline below. {%- endcomment -%}
+
+<div class="layout">
+  {%- if has_psi == false -%}
+    <div class="flex flex--col flex--center h--full">
+      <span class="title title--small">No air quality data</span>
+    </div>
+  {%- else -%}
+    <div class="flex flex--col gap--small">
+      <div class="w--full">{{ map_svg }}</div>
+      <div class="border--h-5"></div>
+      <div class="item">
+        <div class="content">
+          <span class="label label--small">PSI 24h &middot; {{ home_label }}</span>
+          <span class="value value--xxlarge value--tnums">{{ home_psi }}</span>
+          <span class="title title--small">{{ home_band_label }}</span>
+          <span class="description">{{ dom_name }} leading &middot; PM2.5 {{ home_pm25 }}</span>
+        </div>
+      </div>
+    </div>
+  {%- endif -%}
+</div>
+
+<div class="title_bar">
+  <span class="title">Air Quality &middot; SG</span>
+  <span class="instance">{{ psi_item.timestamp | date: '%-l%P' }}</span>
+</div>

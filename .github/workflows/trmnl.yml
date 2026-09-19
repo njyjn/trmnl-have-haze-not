@@ -1,0 +1,35 @@
+name: trmnl
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Map block is in sync with its inputs
+        run: |
+          python3 tools/build_map.py
+          git diff --exit-code src/shared.liquid
+
+      - name: Unit tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Lint plugin
+        run: |
+          docker run --rm --volume "$PWD:/plugin" trmnl/trmnlp lint
+
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Push to TRMNL
+        env:
+          TRMNL_API_KEY: ${{ secrets.TRMNL_API_KEY }}
+        run: docker run --rm -e TRMNL_API_KEY --volume "$PWD:/plugin" trmnl/trmnlp push

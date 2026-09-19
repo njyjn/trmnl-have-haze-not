@@ -1,0 +1,15 @@
+{%- comment -%} One quarter of a 2x2 mashup: the number, the band, nothing else. {%- endcomment -%}
+
+<div class="layout layout--col layout--center">
+  {%- if has_psi == false -%}
+    <span class="title title--small">No data</span>
+  {%- else -%}
+    <span class="label label--small">PSI &middot; {{ home_label }}</span>
+    <span class="value value--xxxlarge value--tnums">{{ home_psi }}</span>
+    <span class="title title--small">{{ home_band_label }}</span>
+  {%- endif -%}
+</div>
+
+<div class="title_bar">
+  <span class="title">Air Quality</span>
+</div>

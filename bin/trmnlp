@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Run trmnlp from the local gem when available, otherwise via Docker.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+if command -v trmnlp >/dev/null 2>&1; then
+  exec trmnlp "$@"
+fi
+
+exec docker run --rm -it \
+  --pull always \
+  --publish 4567:4567 \
+  --volume "$(pwd):/plugin" \
+  trmnl/trmnlp "$@"

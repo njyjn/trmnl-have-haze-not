@@ -37,4 +37,6 @@ jobs:
       - name: Push to TRMNL
         env:
           TRMNL_API_KEY: ${{ secrets.TRMNL_API_KEY }}
-        run: docker run --rm -e TRMNL_API_KEY --volume "$PWD:/plugin" trmnl/trmnlp push
+        # --force: push confirms overwriting server settings via
+        # $stdin.gets, which is nil with no TTY and crashes the run.
+        run: docker run --rm -e TRMNL_API_KEY --volume "$PWD:/plugin" trmnl/trmnlp push --force

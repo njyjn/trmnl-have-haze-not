@@ -25,9 +25,10 @@ framework_version: latest
 refresh_interval: 30
 
 custom_fields:
-# Shown on the recipe's install page. `github_url` is intentionally absent --
-# add your repository URL here before publishing, or the link is simply
-# omitted rather than pointing somewhere wrong.
+# Shown on the recipe's install page.
+#
+# NOTE: `trmnlp push` overwrites this file with the server's copy, which
+# strips these comments. Keep anything you care about in the README.
 - keyname: author_bio
   field_type: author_bio
   name: About This Plugin
@@ -40,6 +41,7 @@ custom_fields:
     forecast from
     <a href="https://open-meteo.com/en/docs/air-quality-api" class="underline" target="_blank">Open-Meteo</a>.
     No account or API key needed.
+  github_url: https://github.com/njyjn/trmnl-have-haze-not
   learn_more_url: https://www.haze.gov.sg/
 
 - keyname: home_region

@@ -199,19 +199,40 @@ path, which needs a web app of your own. A recipe is a private plugin the
 TRMNL team has approved for public listing; installers get their own copy
 with their own `home_region`, and pushed changes reach everyone.
 
-To publish: `make push`, put the returned `id:` into `src/settings.yml`, then
-click **Publish as a Recipe** on the plugin's settings page. Their linter
-(Chef) runs, then a human reviews, usually a day or two. **Unlisted** skips
-moderation and gives a shareable link immediately, which is the easier way to
-test the install flow first.
+### Order of operations
+
+1. **Authenticate.** `trmnlp login` stores a token in
+   `$XDG_CONFIG_HOME/trmnlp/config.yml`, which a `--rm` container throws away,
+   so through Docker it never survives. Use the environment variable instead —
+   it takes priority over the stored token, and `bin/trmnlp` passes it through:
+
+   ```sh
+   export TRMNL_API_KEY=...        # trmnl.com → Settings → API key
+   ```
+
+2. **`make push`.** With no `id:` in `src/settings.yml` this *creates* a new
+   private plugin, then writes the server's copy of `settings.yml` back over
+   your local one — `id:` included. You never copy the id by hand. That
+   rewrite also strips the comments from `settings.yml`, so keep anything
+   worth keeping in this README.
+
+   From then on every `make push` updates that same plugin. Without the `id:`
+   each push would create another copy, which is why CI refuses to deploy
+   until it is there.
+
+3. **Add it to a playlist** on your device and check it renders on real
+   hardware. The first push prints the link.
+
+4. **Publish.** On the plugin's settings page, click **Publish as a Recipe**.
+   Their linter (Chef) runs, then a human reviews, usually a day or two.
+   **Unlisted** skips moderation and gives a shareable link immediately, which
+   is the easier way to test the install flow first.
 
 Before submitting:
 
-- [ ] add `id:` to `src/settings.yml`
-- [ ] add `github_url:` to the `author_bio` field — deliberately absent rather
-      than pointing somewhere wrong
-- [ ] pick categories in the web UI (they are not part of `settings.yml`)
 - [ ] `make test && make lint`
+- [ ] pick categories in the web UI (they are not part of `settings.yml`)
+- [ ] set `TRMNL_API_KEY` as a repo secret if you want CI to deploy on push
 
 Demo data, the usual blocker, does not apply: the plugin polls public APIs
 with no keys and no personal data, so the recipe master's screen is simply

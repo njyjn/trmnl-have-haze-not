@@ -15,6 +15,12 @@ fi
 # uid has none and the gem warns when it cannot create its cache directory.
 args=(--rm --user "$(id -u):$(id -g)" --env HOME=/tmp)
 
+# `trmnlp login` writes its token to $XDG_CONFIG_HOME/trmnlp/config.yml, which
+# a --rm container discards on exit, so a login never survives here. The env
+# var takes priority over that file, which makes it the only auth that works
+# through Docker. Unset is harmless -- docker just does not set it.
+args+=(--env TRMNL_API_KEY)
+
 # Only serve needs the port. Publishing it for build/lint/push fails outright
 # when a serve is already running, which is exactly when you reach for them.
 if [ "${1:-}" = "serve" ]; then

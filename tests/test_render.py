@@ -9,6 +9,7 @@ to its end and reports Hazardous with a blank number. Silent, and alarming.
 Skipped when Docker is unavailable.
 """
 
+import os
 import pathlib
 import re
 import shutil
@@ -36,6 +37,13 @@ def docker_available():
         return False
 
 
+def _user_flags():
+    """Windows has no uid to pass; everywhere else, run as the caller."""
+    if not hasattr(os, "getuid"):
+        return []
+    return ["--user", "%d:%d" % (os.getuid(), os.getgid()), "--env", "HOME=/tmp"]
+
+
 def render(home_region):
     """Render full.html in a throwaway copy configured for one region."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -53,8 +61,20 @@ def render(home_region):
             "time_zone: Asia/Singapore\n"
             "transform_runtime: disabled\n" % home_region
         )
+        # The image runs as root. Docker Desktop on macOS remaps bind-mount
+        # ownership to the calling user, so this is invisible there, but on
+        # Linux the uid passes straight through: _build lands owned by root
+        # and TemporaryDirectory cannot unlink it on the way out. Run as the
+        # invoking user so nothing root-owned is created in the first place.
+        # HOME is set because an unmapped uid has none, and the gem warns
+        # when it cannot create its cache directory.
         subprocess.run(
-            ["docker", "run", "--rm", "--volume", "%s:/plugin" % project, "trmnl/trmnlp", "build"],
+            [
+                "docker", "run", "--rm",
+                *_user_flags(),
+                "--volume", "%s:/plugin" % project,
+                "trmnl/trmnlp", "build",
+            ],
             capture_output=True, timeout=600, check=True,
         )
         return (project / "_build" / "full.html").read_text()

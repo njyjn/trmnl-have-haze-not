@@ -8,17 +8,22 @@ if command -v trmnlp >/dev/null 2>&1; then
   exec trmnlp "$@"
 fi
 
-# -it only when there is a terminal, so `make build` still works in CI.
-# Branching beats an array here: bash 3.2 (still the macOS default) errors on
-# an empty array expansion under `set -u`.
-if [ -t 0 ] && [ -t 1 ]; then
-  exec docker run --rm -it \
-    --publish 4567:4567 \
-    --volume "$(pwd):/plugin" \
-    trmnl/trmnlp "$@"
+# The image runs as root. Docker Desktop remaps bind-mount ownership to the
+# calling user, but on Linux the uid passes straight through and anything
+# written into _build ends up owned by root, which the invoking user then
+# cannot delete. Run as the caller instead. HOME is set because an unmapped
+# uid has none and the gem warns when it cannot create its cache directory.
+args=(--rm --user "$(id -u):$(id -g)" --env HOME=/tmp)
+
+# Only serve needs the port. Publishing it for build/lint/push fails outright
+# when a serve is already running, which is exactly when you reach for them.
+if [ "${1:-}" = "serve" ]; then
+  args+=(--publish 4567:4567)
 fi
 
-exec docker run --rm \
-  --publish 4567:4567 \
-  --volume "$(pwd):/plugin" \
-  trmnl/trmnlp "$@"
+# -it only when there is a terminal, so `make build` still works in CI.
+if [ -t 0 ] && [ -t 1 ]; then
+  args+=(-it)
+fi
+
+exec docker run "${args[@]}" --volume "$(pwd):/plugin" trmnl/trmnlp "$@"

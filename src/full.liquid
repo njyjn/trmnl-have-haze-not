@@ -24,13 +24,15 @@
         <svg class="aq-legend" viewBox="0 0 430 30" width="100%" height="30">
           {%- assign legend_labels = 'Good,Moderate,Unhealthy,V. unhealthy,Hazardous' | split: ',' -%}
           {%- for lbl in legend_labels -%}
-            {%- assign lb = forloop.index -%}
-            {%- assign lr = lb | times: 7 | plus: 2 | divided_by: 10.0 -%}
+            {%- assign lr = band_radii[forloop.index0] -%}
             {%- assign lx = forloop.index0 | times: 88 | plus: 8 -%}
             <circle cx="{{ lx }}" cy="9" r="{{ lr }}"/>
             <text x="{{ lx | plus: 8 }}" y="13">{{ lbl }}</text>
           {%- endfor -%}
-          <text class="aq-legend__scale" x="0" y="28">PSI 0</text>
+          {%- comment -%} "PSI" and "0" are placed separately; a space between
+            them collapses too far in the tabular-numeral face. {%- endcomment -%}
+          <text class="aq-legend__scale" x="0" y="28">PSI</text>
+          <text class="aq-legend__scale" x="28" y="28">0</text>
           <text class="aq-legend__scale" x="88" y="28">51</text>
           <text class="aq-legend__scale" x="176" y="28">101</text>
           <text class="aq-legend__scale" x="264" y="28">201</text>

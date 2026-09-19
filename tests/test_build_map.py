@@ -153,5 +153,52 @@ class TestBandThresholds(unittest.TestCase):
         self.assertEqual(chain, ["50", "100", "200", "300"])
 
 
+class TestDotRamp(unittest.TestCase):
+    """Dot radius is the map's only quantitative channel."""
+
+    def setUp(self):
+        raw = re.search(r"assign band_radii = '([^']*)'", SHARED).group(1)
+        self.radii = [float(v) for v in raw.split(",")]
+
+    def test_one_radius_per_band(self):
+        self.assertEqual(len(self.radii), 5)
+
+    def test_radii_increase_with_severity(self):
+        self.assertEqual(self.radii, sorted(self.radii))
+        self.assertEqual(len(set(self.radii)), 5, "two bands would look identical")
+
+    def test_ink_stays_below_half_coverage(self):
+        """Past ~50% ink the lattice reads as a solid block, not a shade."""
+        import math
+
+        spacing = int(re.search(r"assign map_dot_spacing = (\d+)", SHARED).group(1))
+        cell = spacing * spacing * math.sqrt(3) / 2
+        for band, r in enumerate(self.radii, start=1):
+            coverage = math.pi * r * r / cell
+            self.assertLess(coverage, 0.5, "band %d covers %.0f%% of its cell" % (band, coverage * 100))
+
+    def test_bands_are_distinguishable(self):
+        """Each step must add enough ink to be visible on a 1-bit panel."""
+        for a, b in zip(self.radii, self.radii[1:]):
+            self.assertGreater(b * b / (a * a), 1.4, "step from r=%s to r=%s is too subtle" % (a, b))
+
+    def test_map_and_legend_share_the_list(self):
+        full = (ROOT / "src" / "full.liquid").read_text()
+        self.assertIn("band_radii[forloop.index0]", full, "legend must index band_radii")
+        self.assertIn("band_radii[band_i]", SHARED, "map must index band_radii")
+        for src in (full, SHARED):
+            self.assertNotRegex(src, r"assign \w*_?r\w* = band[_ ]?\w* \| times:",
+                                "radius formula duplicated instead of shared")
+
+
+class TestSvgTypography(unittest.TestCase):
+    """Bare <text> inherits no framework font; the default fallback is serif."""
+
+    def test_map_text_declares_a_font(self):
+        block = re.search(r"\.aq-map text, \.aq-legend text \{([^}]*)\}", SHARED)
+        self.assertIsNotNone(block, "map/legend text must set its own font-family")
+        self.assertIn("font-family", block.group(1))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -122,6 +122,15 @@
   echo place names, so these labels must stay in step with the coordinate
   order in polling_url. See README "Changing the comparison cities".
 {%- endcomment -%}
+{%- comment -%}
+  Dot radius per PSI band, at the 8px hex spacing the lattice is built on.
+  Ink coverage runs about 2/7/14/24/36% -- enough that a one-band step is
+  obvious, light enough that the island still reads as a map rather than a
+  solid block. The map and the legend in full.liquid both index this list, so
+  they cannot drift apart.
+{%- endcomment -%}
+{%- assign band_radii = '0.6,1.1,1.6,2.1,2.6' | split: ',' -%}
+
 {%- assign city_names = 'Kuala Lumpur,Jakarta,Bangkok,Manila' | split: ',' -%}
 {%- assign om_cities = om | slice: 1, 4 -%}
 
@@ -144,7 +153,8 @@
         {%- elsif rpsi <= 100 -%}{%- assign band = 2 -%}
         {%- elsif rpsi <= 200 -%}{%- assign band = 3 -%}
         {%- elsif rpsi <= 300 -%}{%- assign band = 4 -%}{%- endif -%}
-        {%- assign dot_r = band | times: 7 | plus: 2 | divided_by: 10.0 -%}
+        {%- assign band_i = band | minus: 1 -%}
+        {%- assign dot_r = band_radii[band_i] -%}
         {%- assign dots = parts[1] | split: ' ' -%}
         <g>
           {%- for d in dots -%}
@@ -185,14 +195,18 @@
   /* Without display:block + height:auto the SVG has no intrinsic height in a
      flex column and the whole layout collapses. */
   .aq-map, .aq-legend { display: block; width: 100%; height: auto; }
-  .aq-map text { font-size: 11px; font-weight: 700; }
-  .aq-map .aq-map__psi { font-size: 18px; }
+  .aq-map text, .aq-legend text {
+    font-family: var(--value-font-family), "Inter Variable", Inter, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .aq-map text { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
+  .aq-map .aq-map__psi { font-size: 17px; font-weight: 700; letter-spacing: 0; }
   .aq-map .aq-map__halo { stroke: #fff; stroke-width: 3px; paint-order: stroke; }
   .aq-spark .aq-spark__line { fill: none; stroke: #000; stroke-width: 2px; }
   .aq-spark .aq-spark__rule { stroke: #000; stroke-width: 1px; stroke-dasharray: 3 3; }
   .aq-col--map { flex: 0 0 462px; width: 462px; }
   .aq-col--side { flex: 1 1 auto; min-width: 0; }
   .aq-legend { flex: 0 0 auto; }
-  .aq-legend text { font-size: 10px; }
+  .aq-legend text { font-size: 10px; font-weight: 500; }
   .aq-legend .aq-legend__scale { font-size: 11px; font-weight: 700; }
 </style>

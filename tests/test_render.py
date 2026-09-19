@@ -96,6 +96,33 @@ class TestCustomFieldCasing(unittest.TestCase):
 
 
 @unittest.skipUnless(docker_available(), "docker not available")
+class TestRenderedDotSizes(unittest.TestCase):
+    """Every dot drawn must come from the shared radius list."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = render("Central")
+        shared = (ROOT / "src" / "shared.liquid").read_text()
+        raw = re.search(r"assign band_radii = '([^']*)'", shared).group(1)
+        cls.allowed = {float(v) for v in raw.split(",")}
+
+    def test_all_circle_radii_come_from_band_radii(self):
+        radii = {float(r) for r in re.findall(r'<circle[^>]*\br="([\d.]+)"', self.html)}
+        self.assertTrue(radii, "no dots rendered")
+        self.assertTrue(
+            radii <= self.allowed,
+            "unexpected radii %s; band_radii is %s" % (sorted(radii - self.allowed), sorted(self.allowed)),
+        )
+
+    def test_legend_shows_every_band(self):
+        """The legend is what makes dot size decodable, so all five must draw."""
+        legend = re.search(r'<svg class="aq-legend".*?</svg>', self.html, re.S)
+        self.assertIsNotNone(legend)
+        radii = {float(r) for r in re.findall(r'<circle[^>]*\br="([\d.]+)"', legend.group(0))}
+        self.assertEqual(radii, self.allowed)
+
+
+@unittest.skipUnless(docker_available(), "docker not available")
 class TestUnknownRegion(unittest.TestCase):
     """A value that is not one of the five regions must fall back, not blank out."""
 

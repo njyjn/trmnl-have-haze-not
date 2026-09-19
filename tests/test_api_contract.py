@@ -96,7 +96,10 @@ class TestOpenMeteoFixture(unittest.TestCase):
             self.assertIsInstance(entry["current"]["us_aqi"], (int, float))
 
     def test_city_labels_match_the_requested_order(self):
-        names = re.search(r"'([^']*)' \| split: ','", SHARED)
+        # Anchor on the variable name: matching any "'...' | split: ','" would
+        # pick up whichever such list happens to come first in the file.
+        names = re.search(r"assign city_names = '([^']*)'", SHARED)
+        self.assertIsNotNone(names, "city_names not found in shared.liquid")
         labels = names.group(1).split(",")
         self.assertEqual(len(labels), len(self.doc) - 1,
                          "city_names must label every coordinate after Singapore")

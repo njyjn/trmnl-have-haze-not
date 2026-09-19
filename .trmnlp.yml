@@ -1,9 +1,20 @@
 ---
+# Local dev-server config. Not uploaded to TRMNL.
+#
+# NOTE: `trmnlp serve` rewrites this file when you change a value in the
+# preview's Custom Fields picker, so expect it to show up in `git status`
+# after a preview session. Keep the committed value matching the `default:`
+# in src/settings.yml.
 watch:
-- ".trmnlp.yml"
-- src
+  - .trmnlp.yml
+  - src
+
 custom_fields:
-  home_region: West
+  home_region: Central
+
 framework_version: latest
 time_zone: Asia/Singapore
+
+# This plugin has no transform -- all derivation happens in Liquid so it runs
+# on any TRMNL plan.
 transform_runtime: disabled

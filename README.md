@@ -2,12 +2,32 @@
 
 A halftone PSI map of Singapore, the headline reading for your region, the
 dominant pollutant, a 24-hour PM2.5 forecast, and the neighbouring capitals —
-on one 800×480 e-ink screen.
+on one e-ink screen, sized to whichever TRMNL panel it lands on.
 
-![Full screen](docs/screenshot-full.png)
+![Full screen on TRMNL OG](docs/screenshot-full.png)
 
 No server, no API keys, no hosting. TRMNL polls two free public APIs directly
 and the Liquid templates do the rest.
+
+## Devices
+
+The layout is proportional rather than pixel-fixed, so it fills whatever panel
+it lands on. TRMNL renders OG at 800x480 logical pixels and X at 1040x780
+(1872x1404 at `--pixel-ratio: 1.8`), with the BYOD sizes in between.
+
+![Full screen on TRMNL X](docs/screenshot-full-x.png)
+
+The X is 4:3 where the OG is 5:3, so it has spare width and height that a
+layout drawn for the OG has no content for. Two rules handle it: the map
+column widens below a 3:2 aspect ratio, so the extra width grows the map
+rather than the margins; and the forecast chart absorbs the shorter column's
+spare height, up to a cap, which squares the two columns off. Whatever slack
+remains is centred as margin above and below rather than spread into gaps.
+
+The aspect-ratio rule is progressive — if a renderer's viewport does not match
+the panel it simply never fires, and the default split still lays out
+correctly. `tests/test_layout.py` fails the build on a pixel width in a column,
+a pixel-sized SVG, or a nested `.layout`.
 
 ## Where the data comes from
 

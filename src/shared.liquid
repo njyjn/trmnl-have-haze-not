@@ -194,7 +194,7 @@
 <style>
   /* Without display:block + height:auto the SVG has no intrinsic height in a
      flex column and the whole layout collapses. */
-  .aq-map, .aq-legend { display: block; width: 100%; height: auto; }
+  .aq-map, .aq-legend, .aq-spark { display: block; width: 100%; height: auto; }
   .aq-map text, .aq-legend text {
     font-family: var(--value-font-family), "Inter Variable", Inter, sans-serif;
     font-variant-numeric: tabular-nums;
@@ -204,8 +204,39 @@
   .aq-map .aq-map__halo { stroke: #fff; stroke-width: 3px; paint-order: stroke; }
   .aq-spark .aq-spark__line { fill: none; stroke: #000; stroke-width: 2px; }
   .aq-spark .aq-spark__rule { stroke: #000; stroke-width: 1px; stroke-dasharray: 3 3; }
-  .aq-col--map { flex: 0 0 462px; width: 462px; }
-  .aq-col--side { flex: 1 1 auto; min-width: 0; }
+  /* Proportional, never pixel. TRMNL renders OG at 800x480 and X at
+     1040x780 logical px, with BYOD sizes in between, so a fixed column
+     width leaves the map stranded and the lower third of the X empty.
+
+     The pair is centred as one block rather than each column separately:
+     the columns are different heights, and centring them individually
+     misaligns their tops. */
+  .aq-screen { display: flex; flex-direction: column; justify-content: center; height: 100%; }
+  .aq-cols { display: flex; align-items: stretch; height: auto; }
+  .aq-col--map,
+  .aq-col--side {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .aq-col--map { flex: 1 1 57%; }
+  .aq-col--side { flex: 1 1 43%; }
+  .aq-col--headline { flex: 0 0 34%; min-width: 0; }
+  .aq-col--rest { flex: 1 1 66%; min-width: 0; }
+
+  /* The forecast absorbs whatever height the shorter column has spare, which
+     squares the two columns off. Bounded, though: stretched to 400px it
+     turns a 13ug/m3 drift into a cliff. */
+  .aq-spark { flex: 1 1 auto; max-height: 200px; }
+
+  /* Squarer devices (the X, at 4:3) have width the 5:3 OG does not. Widening
+     the map column there grows the map rather than the margins. Progressive:
+     if the renderer's viewport does not match the panel this never fires and
+     the default split still lays out correctly. */
+  @media (max-aspect-ratio: 3 / 2) {
+    .aq-col--map { flex: 1 1 64%; }
+    .aq-col--side { flex: 1 1 36%; }
+  }
   .aq-legend { flex: 0 0 auto; }
   .aq-legend text { font-size: 10px; font-weight: 500; }
   .aq-legend .aq-legend__scale { font-size: 11px; font-weight: 700; }

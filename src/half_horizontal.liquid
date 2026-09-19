@@ -1,13 +1,13 @@
 {%- comment -%} Top or bottom half of a stacked mashup: headline, regions, forecast. {%- endcomment -%}
 
-<div class="layout">
+<div class="layout aq-screen">
   {%- if has_psi == false -%}
     <div class="flex flex--col flex--center h--full">
       <span class="title title--small">No air quality data</span>
     </div>
   {%- else -%}
-    <div class="columns gap--medium">
-      <div class="column w--32">
+    <div class="columns aq-cols gap--medium">
+      <div class="column aq-col--headline">
         <div class="item">
           <div class="content">
             <span class="label label--small">PSI 24h &middot; {{ home_label }}</span>
@@ -17,7 +17,7 @@
         </div>
       </div>
 
-      <div class="column">
+      <div class="column aq-col--rest">
         <span class="label label--small">All regions</span>
         <div class="flex flex--between gap--small">
           {%- for layer in map_layers -%}
@@ -35,8 +35,8 @@
 
         {%- if has_forecast -%}
           <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
-          <svg class="aq-spark" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" height="{{ spark_h }}" preserveAspectRatio="none">
-            <polyline class="aq-spark__line" points="{{ spark_points }}"/>
+          <svg class="aq-spark" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
+            <polyline class="aq-spark__line" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
           </svg>
         {%- else -%}
           <span class="label label--small label--gray-out">Forecast unavailable</span>

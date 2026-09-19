@@ -29,6 +29,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Without an id:, every push would create a brand new plugin rather
+      # than updating the existing one. Fail loudly instead.
+      - name: Plugin id is set
+        run: grep -qE '^id:' src/settings.yml
+
       - name: Push to TRMNL
         env:
           TRMNL_API_KEY: ${{ secrets.TRMNL_API_KEY }}

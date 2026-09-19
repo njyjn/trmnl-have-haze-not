@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Run trmnlp from the local gem when available, otherwise via Docker.
+# The gem needs Ruby >= 3.4; Docker needs nothing.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -7,8 +8,17 @@ if command -v trmnlp >/dev/null 2>&1; then
   exec trmnlp "$@"
 fi
 
-exec docker run --rm -it \
-  --pull always \
+# -it only when there is a terminal, so `make build` still works in CI.
+# Branching beats an array here: bash 3.2 (still the macOS default) errors on
+# an empty array expansion under `set -u`.
+if [ -t 0 ] && [ -t 1 ]; then
+  exec docker run --rm -it \
+    --publish 4567:4567 \
+    --volume "$(pwd):/plugin" \
+    trmnl/trmnlp "$@"
+fi
+
+exec docker run --rm \
   --publish 4567:4567 \
   --volume "$(pwd):/plugin" \
   trmnl/trmnlp "$@"

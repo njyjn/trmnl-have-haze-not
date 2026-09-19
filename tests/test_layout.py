@@ -105,5 +105,22 @@ class TestSvgsScale(unittest.TestCase):
                     )
 
 
+class TestConditionalDetail(unittest.TestCase):
+    """The extra block ships in the markup everywhere but only lays out
+    where there is height for it."""
+
+    def test_hidden_by_default(self):
+        self.assertRegex(STYLE, r"\.aq-regions\s*\{[^}]*display:\s*none")
+
+    def test_enabled_inside_the_aspect_query(self):
+        query = re.search(r"@media \(max-aspect-ratio[^{]*\{(.*?)\n  \}", STYLE, re.S)
+        self.assertIsNotNone(query, "aspect-ratio query not found")
+        self.assertRegex(query.group(1), r"\.aq-regions\s*\{[^}]*display:\s*block")
+
+    def test_markup_is_present_unconditionally(self):
+        full = (SRC / "full.liquid").read_text()
+        self.assertIn('class="aq-regions"', full)
+
+
 if __name__ == "__main__":
     unittest.main()

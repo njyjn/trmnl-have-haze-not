@@ -118,11 +118,6 @@
 {%- endif -%}
 
 {%- comment -%}
-  Regional cities. Open-Meteo returns locations in request order and does not
-  echo place names, so these labels must stay in step with the coordinate
-  order in polling_url. See README "Changing the comparison cities".
-{%- endcomment -%}
-{%- comment -%}
   Dot radius per PSI band, at the 8px hex spacing the lattice is built on.
   Ink coverage runs about 2/7/14/24/36% -- enough that a one-band step is
   obvious, light enough that the island still reads as a map rather than a
@@ -131,8 +126,22 @@
 {%- endcomment -%}
 {%- assign band_radii = '0.6,1.1,1.6,2.1,2.6' | split: ',' -%}
 
-{%- assign city_names = 'Kuala Lumpur,Jakarta,Bangkok,Manila' | split: ',' -%}
-{%- assign om_cities = om | slice: 1, 4 -%}
+{%- comment -%}
+  The regional row compares PM2.5 in ug/m3, not an index. PSI and US AQI are
+  different national scales with different breakpoints and averaging windows,
+  so putting Singapore's PSI beside another city's AQI invites a comparison
+  the reader cannot actually make. A raw concentration is the same quantity
+  everywhere. Singapore is included, from the same model and the same hour as
+  the others, so the row is like-for-like; it reads lower than the NEA PM2.5
+  above it because that one is a measured 24-hour average, labelled as such.
+
+  Open-Meteo returns locations in request order and does not echo place names,
+  so these labels must stay in step with the coordinate order in polling_url.
+  Singapore must stay first -- it is also where the forecast is read from.
+  See README "Changing the comparison cities".
+{%- endcomment -%}
+{%- assign city_names = 'Singapore,Kuala Lumpur,Jakarta,Bangkok,Manila' | split: ',' -%}
+{%- assign om_cities = om -%}
 
 {%- comment -%}
   The map is captured once here rather than repeated in full.liquid and
@@ -233,9 +242,14 @@
      the map column there grows the map rather than the margins. Progressive:
      if the renderer's viewport does not match the panel this never fires and
      the default split still lays out correctly. */
+  /* Extra detail, carried in the markup on every panel but only laid out
+     where there is height going spare. The OG has none, so it stays off. */
+  .aq-regions { display: none; }
+
   @media (max-aspect-ratio: 3 / 2) {
     .aq-col--map { flex: 1 1 64%; }
     .aq-col--side { flex: 1 1 36%; }
+    .aq-regions { display: block; }
   }
   .aq-legend { flex: 0 0 auto; }
   .aq-legend text { font-size: 10px; font-weight: 500; }

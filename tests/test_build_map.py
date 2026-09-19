@@ -191,6 +191,25 @@ class TestDotRamp(unittest.TestCase):
                                 "radius formula duplicated instead of shared")
 
 
+class TestOneScalePerComparison(unittest.TestCase):
+    """PSI and US AQI are different national indices with different
+    breakpoints and averaging windows. Showing Singapore's PSI beside another
+    city's AQI invites a comparison the reader cannot make, so the regional
+    row uses a raw concentration instead and no layout mentions us_aqi."""
+
+    def test_no_us_aqi_anywhere_in_src(self):
+        for path in (ROOT / "src").glob("*.liquid"):
+            self.assertNotIn("us_aqi", path.read_text(), "%s mixes index scales" % path.name)
+
+    def test_polling_url_does_not_fetch_us_aqi(self):
+        settings = (ROOT / "src" / "settings.yml").read_text()
+        self.assertNotIn("us_aqi", settings, "settings.yml still requests an unread field")
+
+    def test_regional_row_is_singapore_first(self):
+        raw = re.search(r"assign city_names = '([^']*)'", SHARED).group(1)
+        self.assertEqual(raw.split(",")[0], "Singapore")
+
+
 class TestSvgTypography(unittest.TestCase):
     """Bare <text> inherits no framework font; the default fallback is serif."""
 

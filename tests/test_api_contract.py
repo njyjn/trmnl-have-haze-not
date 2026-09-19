@@ -91,9 +91,12 @@ class TestOpenMeteoFixture(unittest.TestCase):
         self.assertEqual(len(hourly["time"]), 24)
         self.assertTrue(all(isinstance(v, (int, float)) for v in hourly["pm2_5"]))
 
-    def test_cities_have_a_current_us_aqi(self):
-        for entry in self.doc[1:]:
-            self.assertIsInstance(entry["current"]["us_aqi"], (int, float))
+    def test_every_location_has_a_current_pm25(self):
+        # Singapore is index 0 and is shown in the regional row too, so every
+        # entry needs the reading, not just the cities after it.
+        for i, entry in enumerate(self.doc):
+            self.assertIsInstance(entry["current"]["pm2_5"], (int, float),
+                                  "location %d has no current pm2_5" % i)
 
     def test_city_labels_match_the_requested_order(self):
         # Anchor on the variable name: matching any "'...' | split: ','" would
@@ -101,8 +104,10 @@ class TestOpenMeteoFixture(unittest.TestCase):
         names = re.search(r"assign city_names = '([^']*)'", SHARED)
         self.assertIsNotNone(names, "city_names not found in shared.liquid")
         labels = names.group(1).split(",")
-        self.assertEqual(len(labels), len(self.doc) - 1,
-                         "city_names must label every coordinate after Singapore")
+        self.assertEqual(len(labels), len(self.doc),
+                         "city_names must label every requested coordinate")
+        self.assertEqual(labels[0], "Singapore",
+                         "Singapore must stay first; the forecast is read from index 0")
 
 
 if __name__ == "__main__":

@@ -1,8 +1,9 @@
 # Singapore Air Quality — a TRMNL plugin
 
 A halftone PSI map of Singapore, the headline reading for your region, the
-dominant pollutant, a 24-hour PM2.5 forecast, and the neighbouring capitals —
-on one e-ink screen, sized to whichever TRMNL panel it lands on.
+dominant pollutant, a 24-hour PM2.5 forecast, and how the neighbouring
+capitals compare — on one e-ink screen, sized to whichever TRMNL panel it
+lands on.
 
 ![Full screen on TRMNL OG](docs/screenshot-full.png)
 
@@ -17,12 +18,20 @@ it lands on. TRMNL renders OG at 800x480 logical pixels and X at 1040x780
 
 ![Full screen on TRMNL X](docs/screenshot-full-x.png)
 
-The X is 4:3 where the OG is 5:3, so it has spare width and height that a
-layout drawn for the OG has no content for. Two rules handle it: the map
-column widens below a 3:2 aspect ratio, so the extra width grows the map
-rather than the margins; and the forecast chart absorbs the shorter column's
-spare height, up to a cap, which squares the two columns off. Whatever slack
-remains is centred as margin above and below rather than spread into gaps.
+The X is 4:3 where the OG is 5:3 and carries 2.1x the pixel area, so it has
+width and height a layout drawn for the OG has no content for. That space is
+spent on content rather than padding:
+
+- below a 3:2 aspect ratio the map column widens, so the extra width grows the
+  map rather than the margins
+- a per-region table of PSI, PM2.5 and PM10 appears in the same query. It is
+  in the markup on every panel and simply not laid out on the OG, where there
+  is no room for it
+- the forecast chart absorbs the shorter column's spare height, up to a cap
+
+Spreading the OG's blocks out to fill instead was tried and rejected: it opens
+a ~150px void in the left column, and stretching the forecast far enough to
+reach the bottom turns a 13ug/m3 drift into a cliff.
 
 The aspect-ratio rule is progressive — if a renderer's viewport does not match
 the panel it simply never fires, and the default split still lays out
@@ -34,7 +43,7 @@ a pixel-sized SVG, or a nested `.layout`.
 | Source | Used for | Key needed |
 |---|---|---|
 | [data.gov.sg real-time PSI](https://data.gov.sg/datasets/d_fe37906a0182569d891506e815e819b7/view) (NEA) | the five regional PSI readings, PM2.5/PM10, pollutant sub-indices | no |
-| [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | 24-hour PM2.5 forecast, current US AQI for regional cities | no |
+| [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | 24-hour PM2.5 forecast, current PM2.5 for the regional row | no |
 | [geoBoundaries](https://www.geoboundaries.org/) gbOpen SGP ADM0 | the coastline | n/a, baked in |
 
 NEA is the source for everything inside Singapore because it is the official
@@ -123,12 +132,29 @@ block between the `BEGIN GENERATED MAP` / `END GENERATED MAP` markers in
 `src/shared.liquid`. The generated block is committed; CI re-runs the script
 and fails if the committed output has drifted from its inputs.
 
+### The regional row, and why it is not an index
+
+The row compares PM2.5 in µg/m³ rather than an air quality index. PSI and US
+AQI are different national scales with different breakpoints and averaging
+windows, so Singapore's PSI 108 beside Jakarta's US AQI 210 invites a
+comparison the reader cannot actually make. A raw concentration is the same
+quantity everywhere. Singapore is in the row too, from the same model and the
+same hour as the others, so the comparison is like-for-like.
+
+It reads lower than the PM2.5 shown for your region above it, and that is
+expected: the row is Open-Meteo's modelled value for this hour, while the
+region figure is NEA's measured 24-hour average. Both are labelled.
+
+`tests/test_build_map.py` fails the build if `us_aqi` reappears anywhere in
+`src/`, including in the polling URL.
+
 ### Changing the comparison cities
 
 The cities live in two places that must stay in the same order: the
 `latitude=` / `longitude=` lists in `polling_url` (`src/settings.yml`), and
-`city_names` in `src/shared.liquid`. Singapore must stay first — it is the
-entry the forecast is read from. `make test` fails if the counts disagree.
+`city_names` in `src/shared.liquid`. Singapore must stay first — it is also
+where the forecast is read from. `make test` fails if the counts disagree or
+if Singapore is not first.
 
 ### When the screen goes blank
 

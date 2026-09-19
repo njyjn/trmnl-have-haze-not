@@ -41,14 +41,39 @@
 
         <div class="border--h-5"></div>
 
+        {%- comment -%}
+          Panels squarer than 3:2 (the X) have height this layout has no
+          content for. Rather than pad it out, spend it on the readings the
+          map can only show as a dot size. Hidden on the OG, where there is
+          no room -- see the .aq-regions rules in shared.liquid.
+        {%- endcomment -%}
+        <div class="aq-regions">
+          <div class="grid grid--cols-4">
+            <span class="label label--small">Region</span>
+            <span class="label label--small">PSI</span>
+            <span class="label label--small">PM2.5</span>
+            <span class="label label--small">PM10</span>
+          </div>
+          <div class="border--h-5"></div>
+          {%- for layer in map_layers -%}
+            {%- assign rname = layer | split: '|' | first -%}
+            <div class="grid grid--cols-4">
+              <span class="title title--small">{{ rname | capitalize }}</span>
+              <span class="value value--xsmall value--tnums">{{ psi_all[rname] }}</span>
+              <span class="value value--xsmall value--tnums">{{ readings.pm25_twenty_four_hourly[rname] }}</span>
+              <span class="value value--xsmall value--tnums">{{ readings.pm10_twenty_four_hourly[rname] }}</span>
+            </div>
+          {%- endfor -%}
+        </div>
+
         <div class="aq-cities">
-        <span class="label label--small">Regional &middot; US AQI now</span>
+        <span class="label label--small">Regional &middot; PM2.5 &micro;g/m&sup3; now</span>
         <div class="flex flex--between gap--small">
           {%- for city in om_cities -%}
             <div class="item item--shrink">
               <div class="content">
                 <span class="label label--small">{{ city_names[forloop.index0] }}</span>
-                <span class="value value--small value--tnums">{{ city.current.us_aqi }}</span>
+                <span class="value value--small value--tnums">{{ city.current.pm2_5 | round }}</span>
               </div>
             </div>
           {%- endfor -%}

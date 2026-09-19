@@ -82,6 +82,7 @@
       </div>
 
       <div class="column aq-col--side">
+        <div class="aq-block">
         <div class="item">
           <div class="content">
             <span class="label label--small">PSI 24h &middot; {{ home_label }}</span>
@@ -90,9 +91,11 @@
             <span class="description description--base">{{ home_band_advice }}</span>
           </div>
         </div>
+        </div>
 
         <div class="border--h-5"></div>
 
+        <div class="aq-block">
         <div class="grid grid--cols-3 gap--small">
           <div class="item item--shrink">
             <div class="content">
@@ -113,10 +116,12 @@
             </div>
           </div>
         </div>
-        <span class="label label--small label--gray-out">24-hour average, &micro;g/m&sup3;</span>
+        <span class="label label--small label--gray-out 1bit:text--black">24-hour average, &micro;g/m&sup3;</span>
+        </div>
 
         <div class="border--h-5"></div>
 
+        <div class="aq-block">
         {%- if has_forecast -%}
           <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
           <svg class="aq-spark" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
@@ -129,13 +134,14 @@
             <polyline class="aq-spark__line" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
           </svg>
           <div class="flex flex--between">
-            <span class="label label--small label--gray-out">now {{ fc_now | round }}</span>
-            <span class="label label--small label--gray-out">peak {{ fc_max | round }}</span>
-            <span class="label label--small label--gray-out">{{ fc_times | last | date: '%-l%P' }} {{ fc_end | round }}</span>
+            <span class="label label--small label--gray-out 1bit:text--black">now {{ fc_now | round }}</span>
+            <span class="label label--small label--gray-out 1bit:text--black">peak {{ fc_max | round }}</span>
+            <span class="label label--small label--gray-out 1bit:text--black">{{ fc_times | last | date: '%-l%P' }} {{ fc_end | round }}</span>
           </div>
         {%- else -%}
-          <span class="label label--small label--gray-out">Forecast unavailable</span>
+          <span class="label label--small label--gray-out 1bit:text--black">Forecast unavailable</span>
         {%- endif -%}
+        </div>
       </div>
 
     </div>
@@ -143,6 +149,6 @@
 </div>
 
 <div class="title_bar">
-  <span class="title">Air Quality &middot; Singapore</span>
+  <span class="title">Have Haze Not</span>
   <span class="instance">NEA {{ psi_item.timestamp | date: '%-d %b %-l%P' }}</span>
 </div>

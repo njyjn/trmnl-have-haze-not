@@ -251,6 +251,30 @@
     .aq-col--side { flex: 1 1 36%; }
     .aq-regions { display: block; }
   }
+
+  /* Portrait (the X rotated, 780x1040) is a different problem again: the
+     width is about an OG's, but there are another 500px of height. Side by
+     side, the columns used barely half the panel. Stacked, the map takes the
+     full width -- which is what it wants, being wide and shallow -- and the
+     readings sit above it as a row. Keyed on the class TRMNL itself sets,
+     not on a query, and specific enough to override the rules above. */
+  .screen--portrait .aq-cols { flex-direction: column; }
+  /* The framework's .column sets width:0 and relies on flex-basis to size it.
+     That works along a row, but once stacked, width becomes the cross axis
+     and an explicit 0 is not something align-items:stretch can undo -- the
+     columns collapse to nothing. Selector carries three classes so it beats
+     .trmnl .column outright rather than relying on source order. */
+  .screen--portrait .aq-cols > .column { width: 100%; flex: 0 0 auto; }
+  .screen--portrait .aq-col--side {
+    order: -1;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 20px;
+  }
+  /* Horizontal rules read as slivers once the blocks sit side by side. */
+  .screen--portrait .aq-col--side > .border--h-5 { display: none; }
+  .screen--portrait .aq-block { flex: 1 1 0; min-width: 0; }
+  .screen--portrait .aq-spark { max-height: 90px; }
   .aq-legend { flex: 0 0 auto; }
   .aq-legend text { font-size: 10px; font-weight: 500; }
   .aq-legend .aq-legend__scale { font-size: 11px; font-weight: 700; }

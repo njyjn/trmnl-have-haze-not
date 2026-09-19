@@ -80,7 +80,10 @@ class TestOpenMeteoFixture(unittest.TestCase):
         self.assertIsInstance(self.doc, list)
 
     def test_one_entry_per_requested_coordinate(self):
-        urls = [u for u in SETTINGS.splitlines() if "air-quality-api" in u]
+        # Match the polling URL itself, not any mention of the host -- the
+        # author_bio description links to Open-Meteo's docs.
+        urls = [u.strip() for u in SETTINGS.splitlines()
+                if u.strip().startswith("https://air-quality-api.open-meteo.com/v1/air-quality?")]
         self.assertEqual(len(urls), 1)
         lats = re.search(r"latitude=([^&]+)", urls[0]).group(1).split(",")
         self.assertEqual(len(self.doc), len(lats))
@@ -108,6 +111,27 @@ class TestOpenMeteoFixture(unittest.TestCase):
                          "city_names must label every requested coordinate")
         self.assertEqual(labels[0], "Singapore",
                          "Singapore must stay first; the forecast is read from index 0")
+
+
+class TestPublishingMetadata(unittest.TestCase):
+    """Fields the recipe review looks at."""
+
+    def test_name_and_description(self):
+        self.assertRegex(SETTINGS, r"(?m)^name: Have Haze Not$")
+        m = re.search(r"(?m)^description: (.+)$", SETTINGS)
+        self.assertIsNotNone(m)
+        self.assertLessEqual(len(m.group(1)), 35, "trmnlp lint caps description at 35 chars")
+
+    def test_author_bio_is_present(self):
+        self.assertIn("field_type: author_bio", SETTINGS,
+                      "recipe review expects an author_bio field")
+
+    def test_refresh_interval_respects_the_upstream_cadence(self):
+        m = re.search(r"(?m)^refresh_interval: (\d+)$", SETTINGS)
+        self.assertIsNotNone(m)
+        # NEA publishes hourly; polling faster just adds load for every
+        # installer without ever showing a newer number.
+        self.assertGreaterEqual(int(m.group(1)), 30)
 
 
 if __name__ == "__main__":

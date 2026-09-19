@@ -39,7 +39,7 @@
             <polyline class="aq-spark__line" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
           </svg>
         {%- else -%}
-          <span class="label label--small label--gray-out">Forecast unavailable</span>
+          <span class="label label--small label--gray-out 1bit:text--black">Forecast unavailable</span>
         {%- endif -%}
       </div>
     </div>
@@ -47,6 +47,6 @@
 </div>
 
 <div class="title_bar">
-  <span class="title">Air Quality &middot; Singapore</span>
+  <span class="title">Have Haze Not</span>
   <span class="instance">NEA {{ psi_item.timestamp | date: '%-d %b %-l%P' }}</span>
 </div>

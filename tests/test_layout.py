@@ -122,5 +122,41 @@ class TestConditionalDetail(unittest.TestCase):
         self.assertIn('class="aq-regions"', full)
 
 
+class TestPortrait(unittest.TestCase):
+    """Portrait is a review requirement (OG landscape, X landscape, X portrait)
+    and it is the orientation nothing else exercises."""
+
+    def test_columns_stack(self):
+        self.assertRegex(STYLE, r"\.screen--portrait \.aq-cols\s*\{[^}]*flex-direction:\s*column")
+
+    def test_stacked_columns_reclaim_their_width(self):
+        """.trmnl .column sets width:0 and leans on flex-basis, which does
+        nothing once width is the cross axis -- the columns collapse to zero.
+        The override needs three classes to outrank it on specificity."""
+        rule = re.search(r"\.screen--portrait \.aq-cols > \.column\s*\{([^}]*)\}", STYLE)
+        self.assertIsNotNone(rule, "no width override for stacked columns")
+        self.assertRegex(rule.group(1), r"width:\s*(100%|auto)")
+
+    def test_readings_lead_the_stack(self):
+        self.assertRegex(STYLE, r"\.screen--portrait \.aq-col--side\s*\{[^}]*order:\s*-1")
+
+    def test_side_blocks_exist_to_lay_out_as_a_row(self):
+        full = (SRC / "full.liquid").read_text()
+        self.assertEqual(full.count('class="aq-block"'), 3,
+                         "portrait lays the side column out as three blocks")
+
+
+class TestOneBitLegibility(unittest.TestCase):
+    """Grey labels dither away on a 1-bit panel; the framework has a class
+    that forces them black there, and review asks for it."""
+
+    def test_every_grey_label_is_forced_black_on_1bit(self):
+        for name in LAYOUTS:
+            text = (SRC / ("%s.liquid" % name)).read_text()
+            for m in re.finditer(r'class="([^"]*label--gray-out[^"]*)"', text):
+                self.assertIn("1bit:text--black", m.group(1),
+                              "%s.liquid has a grey label that vanishes at 1-bit" % name)
+
+
 if __name__ == "__main__":
     unittest.main()

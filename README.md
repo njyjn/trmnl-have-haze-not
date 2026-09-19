@@ -1,9 +1,11 @@
-# Singapore Air Quality — a TRMNL plugin
+# Have Haze Not
 
-A halftone PSI map of Singapore, the headline reading for your region, the
-dominant pollutant, a 24-hour PM2.5 forecast, and how the neighbouring
-capitals compare — on one e-ink screen, sized to whichever TRMNL panel it
-lands on.
+A Singapore air quality tracker for [TRMNL](https://trmnl.com).
+
+A halftone PSI map of all five NEA reporting regions, the headline reading for
+your region with its dominant pollutant, a 24-hour PM2.5 forecast, and how the
+neighbouring capitals compare — on one e-ink screen, sized to whichever TRMNL
+panel it lands on.
 
 ![Full screen on TRMNL OG](docs/screenshot-full.png)
 
@@ -17,6 +19,20 @@ it lands on. TRMNL renders OG at 800x480 logical pixels and X at 1040x780
 (1872x1404 at `--pixel-ratio: 1.8`), with the BYOD sizes in between.
 
 ![Full screen on TRMNL X](docs/screenshot-full-x.png)
+
+Portrait is its own case. The width is about an OG's, but there are another
+500px of height, and side by side the columns used barely half the panel. The
+columns stack instead: the map takes the full width, which suits a shape that
+is wide and shallow, and the readings sit above it as a row. That took a
+fill of 57% to 96%.
+
+![Portrait on TRMNL X](docs/screenshot-full-x-portrait.png)
+
+One trap worth knowing if you touch this: the framework's `.column` sets
+`width: 0` and leans on flex-basis to size it. Along a row that is fine, but
+once the columns stack, width becomes the cross axis and `align-items:
+stretch` cannot undo an explicit zero — every column collapses to nothing.
+The override needs three classes to outrank `.trmnl .column`.
 
 The X is 4:3 where the OG is 5:3 and carries 2.1x the pixel area, so it has
 width and height a layout drawn for the OG has no content for. That space is
@@ -174,6 +190,32 @@ once you have adapted the templates.
 | `quadrant` | headline PSI and band |
 
 ![Half vertical](docs/screenshot-half_vertical.png)
+
+## Publishing
+
+This is shaped as a TRMNL [Recipe](https://help.trmnl.com/en/articles/10122094-plugin-recipes):
+public, but with no server and no OAuth — that is the third-party plugin
+path, which needs a web app of your own. A recipe is a private plugin the
+TRMNL team has approved for public listing; installers get their own copy
+with their own `home_region`, and pushed changes reach everyone.
+
+To publish: `make push`, put the returned `id:` into `src/settings.yml`, then
+click **Publish as a Recipe** on the plugin's settings page. Their linter
+(Chef) runs, then a human reviews, usually a day or two. **Unlisted** skips
+moderation and gives a shareable link immediately, which is the easier way to
+test the install flow first.
+
+Before submitting:
+
+- [ ] add `id:` to `src/settings.yml`
+- [ ] add `github_url:` to the `author_bio` field — deliberately absent rather
+      than pointing somewhere wrong
+- [ ] pick categories in the web UI (they are not part of `settings.yml`)
+- [ ] `make test && make lint`
+
+Demo data, the usual blocker, does not apply: the plugin polls public APIs
+with no keys and no personal data, so the recipe master's screen is simply
+the product.
 
 ## Licence and attribution
 

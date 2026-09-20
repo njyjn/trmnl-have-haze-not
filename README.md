@@ -234,6 +234,18 @@ deploys, which doubles as an agent prompt.
    **Unlisted** skips moderation and gives a shareable link immediately, which
    is the easier way to test the install flow first.
 
+The recipe icon is at `docs/icon.png`, generated from the same coastline the
+map uses rather than traced:
+
+```sh
+python3 tools/build_icon.py --variant panel --out docs/icon.png
+```
+
+`--variant` picks the treatment — `panel` is the halftone island as the screen
+draws it, `haze` puts the halftone in the air and keeps the coastline solid,
+`solid` is the silhouette alone, `disc` a reversed badge. Run without `--out`
+to render them all to `docs/` and compare.
+
 Before submitting:
 
 - [ ] `make test && make lint`

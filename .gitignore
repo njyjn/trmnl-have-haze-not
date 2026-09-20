@@ -2,3 +2,7 @@
 _build/
 .DS_Store
 __pycache__/
+
+# Alternate icon renders; tools/build_icon.py reproduces any of them in
+# seconds, so only the one that gets uploaded is tracked.
+docs/icon-*.png

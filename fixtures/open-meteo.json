@@ -2,7 +2,7 @@
   {
     "latitude": 1.4000015,
     "longitude": 103.80002,
-    "generationtime_ms": 0.5662441253662109,
+    "generationtime_ms": 0.5720853805541992,
     "utc_offset_seconds": 28800,
     "timezone": "Asia/Singapore",
     "timezone_abbreviation": "GMT+8",
@@ -81,7 +81,7 @@
   {
     "latitude": 3.0999985,
     "longitude": 101.70001,
-    "generationtime_ms": 0.4061460494995117,
+    "generationtime_ms": 0.667572021484375,
     "utc_offset_seconds": 28800,
     "timezone": "Asia/Singapore",
     "timezone_abbreviation": "GMT+8",
@@ -161,7 +161,7 @@
   {
     "latitude": -6.199997,
     "longitude": 106.80002,
-    "generationtime_ms": 0.3300905227661133,
+    "generationtime_ms": 0.3037452697753906,
     "utc_offset_seconds": 28800,
     "timezone": "Asia/Singapore",
     "timezone_abbreviation": "GMT+8",
@@ -241,7 +241,7 @@
   {
     "latitude": 13.800003,
     "longitude": 100.5,
-    "generationtime_ms": 0.31828880310058594,
+    "generationtime_ms": 0.45740604400634766,
     "utc_offset_seconds": 28800,
     "timezone": "Asia/Singapore",
     "timezone_abbreviation": "GMT+8",
@@ -321,7 +321,7 @@
   {
     "latitude": 14.599998,
     "longitude": 121.0,
-    "generationtime_ms": 0.3114938735961914,
+    "generationtime_ms": 0.3459453582763672,
     "utc_offset_seconds": 28800,
     "timezone": "Asia/Singapore",
     "timezone_abbreviation": "GMT+8",

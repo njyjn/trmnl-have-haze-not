@@ -172,12 +172,6 @@ class TestBreakpointTables(unittest.TestCase):
             (55.5, 125.4, 151, 200), (125.5, 225.4, 201, 300), (225.5, 325.4, 301, 500),
         ])
 
-    def test_epa_pm10_matches_the_published_table(self):
-        self.assertEqual(self.segments("epa_pm10"), [
-            (0, 54, 0, 50), (55, 154, 51, 100), (155, 254, 101, 150),
-            (255, 354, 151, 200), (355, 424, 201, 300), (425, 604, 301, 500),
-        ])
-
     def test_nea_pm25_matches_the_published_table(self):
         self.assertEqual(self.segments("nea_pm25"), [
             (0, 12, 0, 50), (12, 55, 50, 100), (55, 150, 100, 200),
@@ -185,7 +179,7 @@ class TestBreakpointTables(unittest.TestCase):
         ])
 
     def test_segments_are_contiguous_and_rising(self):
-        for name in ("epa_pm25", "epa_pm10", "nea_pm25"):
+        for name in ("epa_pm25", "nea_pm25"):
             segs = self.segments(name)
             for (clo, chi, ilo, ihi) in segs:
                 self.assertLess(clo, chi, "%s: empty concentration span" % name)

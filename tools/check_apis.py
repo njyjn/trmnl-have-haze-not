@@ -60,21 +60,24 @@ def main() -> int:
     args = parser.parse_args()
 
     urls = polling_urls()
-    if len(urls) != 2:
-        print("error: expected 2 polling URLs in settings.yml, found %d" % len(urls), file=sys.stderr)
+    if len(urls) != 3:
+        print("error: expected 3 polling URLs in settings.yml, found %d" % len(urls), file=sys.stderr)
         return 1
 
-    psi_url = next(u for u in urls if "data.gov.sg" in u)
+    psi_url = next(u for u in urls if u.endswith("/psi"))
+    pm25_url = next(u for u in urls if u.endswith("/pm25"))
     om_url = next(u for u in urls if "open-meteo" in u)
 
-    print("GET %s" % psi_url)
-    psi = fetch(psi_url)
+    for u in (psi_url, pm25_url):
+        print("GET %s" % u)
     print("GET %s" % om_url[:96] + "...")
+    psi = fetch(psi_url)
+    pm25 = fetch(pm25_url)
     om = fetch(om_url)
 
     # Write to a scratch location first so the contract tests run against the
     # live payloads; only promote to fixtures/ if they pass.
-    staged = {"psi.json": psi, "open-meteo.json": om}
+    staged = {"psi.json": psi, "pm25.json": pm25, "open-meteo.json": om}
     backups = {name: (FIXTURES / name).read_text() for name in staged if (FIXTURES / name).exists()}
     for name, doc in staged.items():
         (FIXTURES / name).write_text(json.dumps(doc, indent=2))

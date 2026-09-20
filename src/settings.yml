@@ -8,6 +8,7 @@ framework_version: latest
 serverless_language:
 polling_url: |-
   https://api-open.data.gov.sg/v2/real-time/api/psi
+  https://api-open.data.gov.sg/v2/real-time/api/pm25
   https://air-quality-api.open-meteo.com/v1/air-quality?latitude=1.3521,3.139,-6.2088,13.7563,14.5995&longitude=103.8198,101.6869,106.8456,100.5018,120.9842&current=pm2_5,us_aqi&hourly=pm2_5&forecast_hours=24&past_hours=0&timezone=Asia%2FSingapore
 polling_headers: ''
 polling_body:

@@ -72,7 +72,8 @@ def render(home_region, scale=None):
             "IDX_0": json.loads((ROOT / "fixtures" / "psi.json").read_text()),
             # The poller wraps an array-rooted response as {"data": [...]},
             # so the override has to have that shape too.
-            "IDX_1": {"data": json.loads((ROOT / "fixtures" / "open-meteo.json").read_text())},
+            "IDX_1": json.loads((ROOT / "fixtures" / "pm25.json").read_text()),
+            "IDX_2": {"data": json.loads((ROOT / "fixtures" / "open-meteo.json").read_text())},
         }
         fields = {"home_region": home_region}
         if scale:
@@ -130,7 +131,7 @@ class TestCustomFieldCasing(unittest.TestCase):
     def test_band_agrees_with_the_value(self):
         """Default scale is US AQI, which has its own six-band ladder."""
         scale, _, value, band = HEADLINE.search(self.html).groups()
-        self.assertEqual(scale, "US AQI")
+        self.assertEqual(scale, "US AQI now")
         v = int(value)
         expected = (
             "Good" if v <= 50 else
@@ -192,8 +193,6 @@ class TestUnknownRegion(unittest.TestCase):
 # must not read the table out of shared.liquid.
 EPA_PM25 = [(0, 9.0, 0, 50), (9.1, 35.4, 51, 100), (35.5, 55.4, 101, 150),
             (55.5, 125.4, 151, 200), (125.5, 225.4, 201, 300), (225.5, 325.4, 301, 500)]
-EPA_PM10 = [(0, 54, 0, 50), (55, 154, 51, 100), (155, 254, 101, 150),
-            (255, 354, 151, 200), (355, 424, 201, 300), (425, 604, 301, 500)]
 
 
 def sub_index(c, table):
@@ -220,12 +219,27 @@ class TestDerivedAqi(unittest.TestCase):
         return rows
 
     def test_every_region_matches_an_independent_calculation(self):
-        for name, shown, pm25, pm10 in self.rows():
-            expected = max(sub_index(float(pm25), EPA_PM25),
-                           sub_index(float(pm10), EPA_PM10))
+        # The AQI comes off NEA's hourly PM2.5, not the 24-hour column the
+        # page prints, so read the hourly figures straight from the fixture
+        # the render was given.
+        hourly = json.loads((ROOT / "fixtures" / "pm25.json").read_text())
+        hourly = hourly["data"]["items"][0]["readings"]["pm25_one_hourly"]
+        for name, shown, _pm25_24h, _pm10 in self.rows():
+            c = hourly[name.lower()]
+            expected = sub_index(float(c), EPA_PM25)
             self.assertEqual(int(shown), expected,
-                             "%s: page says %s, EPA breakpoints give %d "
-                             "(PM2.5 %s, PM10 %s)" % (name, shown, expected, pm25, pm10))
+                             "%s: page says %s, EPA breakpoints on the hourly "
+                             "PM2.5 of %s give %d" % (name, shown, c, expected))
+
+    def test_uses_the_hourly_reading_not_the_daily_mean(self):
+        """The whole point of the change: a 24-hour mean lags badly enough
+        during haze to disagree with every other source by ~60 points."""
+        for name, shown, pm25_24h, _ in self.rows():
+            daily = sub_index(float(pm25_24h), EPA_PM25)
+            if daily != int(shown):
+                return
+        self.fail("every region matches the 24-hour mean; the hourly feed "
+                  "is probably not being read")
 
     def test_headline_matches_the_home_region_row(self):
         _, region, value, _ = HEADLINE.search(self.html).groups()
@@ -240,7 +254,7 @@ class TestScaleSwitching(unittest.TestCase):
     """Every scale must change the whole screen, not just the big number."""
 
     CASES = {
-        "US AQI": ("US AQI", ["Good", "Moderate", "Sensitive", "Unhealthy",
+        "US AQI": ("US AQI now", ["Good", "Moderate", "Sensitive", "Unhealthy",
                               "V. unhealthy", "Hazardous"]),
         "NEA PSI": ("PSI 24h", ["Good", "Moderate", "Unhealthy",
                                 "V. unhealthy", "Hazardous"]),

@@ -10,6 +10,7 @@ watch:
   - src
 
 custom_fields:
+  scale: US AQI
   home_region: Central
 
 framework_version: latest

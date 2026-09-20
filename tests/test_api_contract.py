@@ -70,6 +70,30 @@ class TestPsiFixture(unittest.TestCase):
             self.assertAlmostEqual(loc["longitude"], baked[name]["longitude"], places=4)
 
 
+class TestHourlyPm25Fixture(unittest.TestCase):
+    """The AQI is derived from this feed, so it is load-bearing."""
+
+    def setUp(self):
+        self.doc = load("pm25.json")
+
+    def test_envelope(self):
+        self.assertTrue(self.doc["data"]["items"], "no PM2.5 items")
+
+    def test_covers_all_regions(self):
+        readings = self.doc["data"]["items"][0]["readings"]["pm25_one_hourly"]
+        for region in REGIONS:
+            self.assertIn(region, readings)
+            self.assertIsInstance(readings[region], (int, float))
+
+    def test_reads_lower_than_the_24h_average_during_haze(self):
+        """Not a law of nature, but if the hourly feed ever matched the daily
+        mean exactly it would mean the wrong field is being read."""
+        hourly = self.doc["data"]["items"][0]["readings"]["pm25_one_hourly"]
+        daily = load("psi.json")["data"]["items"][0]["readings"]["pm25_twenty_four_hourly"]
+        self.assertNotEqual(sorted(hourly.items()), sorted(daily.items()),
+                            "hourly and 24-hour PM2.5 are identical; check the field")
+
+
 class TestOpenMeteoFixture(unittest.TestCase):
     def setUp(self):
         self.doc = load("open-meteo.json")
@@ -85,6 +109,11 @@ class TestOpenMeteoFixture(unittest.TestCase):
         urls = [u.strip() for u in SETTINGS.splitlines()
                 if u.strip().startswith("https://air-quality-api.open-meteo.com/v1/air-quality?")]
         self.assertEqual(len(urls), 1)
+        # Order matters: it decides the IDX_ numbering the templates read.
+        polled = [l.strip() for l in SETTINGS.splitlines() if l.strip().startswith("https://")]
+        self.assertTrue(polled[0].endswith("/psi"), "PSI must stay IDX_0")
+        self.assertTrue(polled[1].endswith("/pm25"), "hourly PM2.5 must stay IDX_1")
+        self.assertIn("open-meteo", polled[2], "Open-Meteo must stay IDX_2")
         lats = re.search(r"latitude=([^&]+)", urls[0]).group(1).split(",")
         self.assertEqual(len(self.doc), len(lats))
 

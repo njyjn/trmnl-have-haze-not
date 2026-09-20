@@ -3,9 +3,10 @@
   all derivation happens: the layouts below only read the variables set here.
 
   Polled sources (see src/settings.yml):
-    IDX_0  data.gov.sg real-time PSI     -> the five NEA regions
-    IDX_1  Open-Meteo air quality        -> array root, wrapped by TRMNL as .data
-           [0] Singapore (24h hourly forecast), [1..4] regional cities
+    IDX_0  data.gov.sg PSI          -> 24h PSI and pollutants, five regions
+    IDX_1  data.gov.sg PM2.5        -> hourly PM2.5, same five regions
+    IDX_2  Open-Meteo air quality   -> array root, wrapped by TRMNL as .data
+           [0] Singapore (24h forecast), [1..4] regional cities
 {%- endcomment -%}
 
 {%- comment -%} BEGIN GENERATED MAP -- tools/build_map.py {%- endcomment -%}
@@ -26,7 +27,12 @@
 {%- assign psi_item = IDX_0.data.items[0] -%}
 {%- assign readings = psi_item.readings -%}
 {%- assign psi_all = readings.psi_twenty_four_hourly -%}
-{%- assign om = IDX_1.data -%}
+{%- comment -%}
+  NEA's hourly PM2.5 is a separate endpoint from the PSI one. It is what the
+  AQI is derived from -- see the scale notes below.
+{%- endcomment -%}
+{%- assign pm25_1h = IDX_1.data.items[0].readings.pm25_one_hourly -%}
+{%- assign om = IDX_2.data -%}
 {%- assign om_sg = om[0] -%}
 
 {%- comment -%} ---------- scale ---------- {%- endcomment -%}
@@ -55,7 +61,6 @@
   concentration it reports.
 {%- endcomment -%}
 {%- assign epa_pm25 = '0,9.0,0,50|9.1,35.4,51,100|35.5,55.4,101,150|55.5,125.4,151,200|125.5,225.4,201,300|225.5,325.4,301,500' | split: '|' -%}
-{%- assign epa_pm10 = '0,54,0,50|55,154,51,100|155,254,101,150|255,354,151,200|355,424,201,300|425,604,301,500' | split: '|' -%}
 {%- assign nea_pm25 = '0,12,0,50|12,55,50,100|55,150,100,200|150,250,200,300|250,500,300,500' | split: '|' -%}
 
 {%- comment -%}
@@ -80,7 +85,7 @@
   {%- assign band_short = 'Good,Moderate,Unhealthy,V. unhealthy,Hazardous' | split: ',' -%}
   {%- assign band_advice = 'Normal activities,Normal activities,Reduce outdoor exertion,Avoid outdoor activity,Stay indoors' | split: ',' -%}
 {%- else -%}
-  {%- assign scale_name = 'US AQI' -%}
+  {%- assign scale_name = 'US AQI now' -%}
   {%- assign scale_short = 'AQI' -%}
   {%- assign scale_city_note = 'US AQI now' -%}
   {%- assign band_edges = '50,100,150,200,300' | split: ',' -%}
@@ -140,9 +145,24 @@
   {%- elsif scale_key == 'pm25' -%}
     {%- assign rv = readings.pm25_twenty_four_hourly[rn] -%}
   {%- else -%}
-    {%- comment -%} US AQI is the worst sub-index; NEA gives both particulates. {%- endcomment -%}
-    {%- assign c25 = readings.pm25_twenty_four_hourly[rn] -%}
-    {%- assign c10 = readings.pm10_twenty_four_hourly[rn] -%}
+    {%- comment -%}
+      Derived from NEA's *hourly* PM2.5, not the 24-hour average. EPA defines
+      the PM2.5 AQI on a 24-hour mean, but every consumer source people
+      compare against -- aqicn, IQAir, phone apps -- reports the current hour,
+      and for Singapore aqicn is re-serving this very NEA feed. Using the
+      24-hour mean read about 60 points higher than aqicn during haze, which
+      is a lag, not a disagreement. Matching what is on the wall beats
+      matching the letter of the definition here, and the label says "now".
+
+      PM2.5 alone, again matching aqicn: NEA publishes no hourly PM10, and
+      mixing a 1-hour PM2.5 sub-index with a 24-hour PM10 one would compare
+      different windows. PM10 has never been the driver in this data anyway.
+    {%- endcomment -%}
+    {%- assign c25 = pm25_1h[rn] -%}
+    {%- unless c25 -%}
+      {%- comment -%} Hourly feed unavailable: fall back rather than blank out. {%- endcomment -%}
+      {%- assign c25 = readings.pm25_twenty_four_hourly[rn] -%}
+    {%- endunless -%}
     {%- assign a25 = 0 -%}
     {%- if c25 > 325.4 -%}{%- assign a25 = 500 -%}{%- endif -%}
     {%- for seg in epa_pm25 -%}
@@ -155,20 +175,7 @@
         {%- break -%}
       {%- endif -%}
     {%- endfor -%}
-    {%- assign a10 = 0 -%}
-    {%- if c10 > 604 -%}{%- assign a10 = 500 -%}{%- endif -%}
-    {%- for seg in epa_pm10 -%}
-      {%- assign sp = seg | split: ',' -%}
-      {%- assign clo = sp[0] | plus: 0 -%}{%- assign chi = sp[1] | plus: 0 -%}
-      {%- if c10 >= clo and c10 <= chi -%}
-        {%- assign ilo = sp[2] | plus: 0 -%}{%- assign ihi = sp[3] | plus: 0 -%}
-        {%- assign si = ihi | minus: ilo -%}{%- assign sc = chi | minus: clo -%}
-        {%- assign a10 = c10 | minus: clo | times: si | times: 1.0 | divided_by: sc | plus: ilo | round -%}
-        {%- break -%}
-      {%- endif -%}
-    {%- endfor -%}
     {%- assign rv = a25 -%}
-    {%- if a10 > rv -%}{%- assign rv = a10 -%}{%- endif -%}
   {%- endif -%}
   {%- assign region_names = region_names | append: rn | append: ',' -%}
   {%- assign region_values = region_values | append: rv | append: ',' -%}

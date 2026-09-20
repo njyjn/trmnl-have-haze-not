@@ -58,7 +58,8 @@ a pixel-sized SVG, or a nested `.layout`.
 
 | Source | Used for | Key needed |
 |---|---|---|
-| [data.gov.sg real-time PSI](https://data.gov.sg/datasets/d_fe37906a0182569d891506e815e819b7/view) (NEA) | the five regional PSI readings, PM2.5/PM10, pollutant sub-indices | no |
+| [data.gov.sg real-time PSI](https://data.gov.sg/datasets/d_fe37906a0182569d891506e815e819b7/view) (NEA) | 24-hour PSI, PM2.5/PM10 and pollutant sub-indices, five regions | no |
+| [data.gov.sg PM2.5](https://api-open.data.gov.sg/v2/real-time/api/pm25) (NEA) | hourly PM2.5, same five regions — what the AQI is derived from | no |
 | [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | 24-hour PM2.5 forecast, current PM2.5 and US AQI for the regional row | no |
 | [geoBoundaries](https://www.geoboundaries.org/) gbOpen SGP ADM0 | the coastline | n/a, baked in |
 
@@ -115,17 +116,41 @@ has no shared file.
 
 | Choice | Singapore regions | Regional cities |
 |---|---|---|
-| US AQI | derived from NEA's PM2.5 and PM10 | Open-Meteo's `us_aqi` |
+| US AQI | derived from NEA's hourly PM2.5 | Open-Meteo's `us_aqi` |
 | NEA PSI | NEA's published PSI | derived from modelled PM2.5 |
 | PM2.5 | NEA's 24-hour average, µg/m³ | Open-Meteo's PM2.5, µg/m³ |
 
 No free source publishes an AQI per Singapore *region* — Open-Meteo's model
 runs on a ~11 km grid that cannot tell one part of the island from another —
 so US AQI is computed from NEA's own measurements using EPA's published
-breakpoints. Those are defined on 24-hour averages, which is exactly what NEA
-reports, so it is a conversion of official readings rather than a guess. The
-value shown is the worse of the PM2.5 and PM10 sub-indices, matching how the
-US AQI is defined.
+breakpoints.
+
+It is derived from NEA's **hourly** PM2.5, not the 24-hour average. EPA
+defines the PM2.5 AQI on a 24-hour mean, but every consumer source people
+compare against reports the current hour, and the difference is not small:
+during haze the daily mean read about **60 points higher**. That is a lag, not
+a disagreement, and on a screen on the wall the current hour is the useful
+number. The label says *now* so the window is never ambiguous.
+
+PM2.5 alone, for the same reason: NEA publishes no hourly PM10, and mixing a
+1-hour PM2.5 sub-index with a 24-hour PM10 one would compare different
+windows. PM10 has not been the driver in this data.
+
+### Why not aqicn's API
+
+[aqicn.org](https://aqicn.org/city/singapore/west/) has per-region Singapore
+pages and a good API, but two things rule it out. It needs a free token per
+user, which would end this plugin's "no account or API key needed" property
+for everyone who installs it. And it is unnecessary: their own attribution
+reads *"measured by NEA"* — they re-serve the same feed this plugin already
+polls directly.
+
+Checked region by region against their pages, the plugin now lands within 1–3
+points. The remainder is not an error on either side: aqicn still uses the
+**pre-2024** EPA breakpoints, where Good topped at 12.0µg/m³. Feeding NEA's
+hourly readings through that older table reproduces their numbers exactly for
+all five regions. This plugin uses the current table, revised in May 2024,
+where Good tops at 9.0.
 
 PSI runs the other way. It is a Singapore-only index, so for the comparison
 cities each modelled PM2.5 is put on NEA's own PM2.5 sub-index scale and the

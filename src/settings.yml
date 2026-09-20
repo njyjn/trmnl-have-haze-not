@@ -18,7 +18,18 @@ custom_fields:
 - keyname: author_bio
   field_type: author_bio
   name: About This Plugin
-  description: A Singapore air quality tracker. Shows the National Environment Agency's PSI for all five reporting regions as a halftone map, the reading for your region with its dominant pollutant, a 24-hour PM2.5 forecast, and how neighbouring capitals compare. Readings from <a href="https://data.gov.sg/datasets/d_fe37906a0182569d891506e815e819b7/view" class="underline" target="_blank">data.gov.sg</a>, forecast from <a href="https://open-meteo.com/en/docs/air-quality-api" class="underline" target="_blank">Open-Meteo</a>. No account or API key needed.
+  description: >-
+    Air quality for all five of Singapore's NEA reporting regions, drawn as a
+    halftone map of the island. Shows the reading for your region with the
+    pollutant driving it, a 24-hour PM2.5 forecast, and how neighbouring
+    capitals compare. Pick your scale: US AQI, NEA PSI, or raw PM2.5.
+    Measurements from
+    <a href="https://data.gov.sg/datasets/d_fe37906a0182569d891506e815e819b7/view" class="underline" target="_blank">NEA via data.gov.sg</a>,
+    forecast from
+    <a href="https://open-meteo.com/en/docs/air-quality-api" class="underline" target="_blank">Open-Meteo</a>.
+    Works with no account at all; add a free
+    <a href="https://aqicn.org/data-platform/token/" class="underline" target="_blank">aqicn.org token</a>
+    and the US AQI matches their site exactly.
   github_url: https://github.com/njyjn/trmnl-have-haze-not
   learn_more_url: https://www.haze.gov.sg/
 - keyname: aqicn_token

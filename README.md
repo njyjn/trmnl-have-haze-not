@@ -2,15 +2,16 @@
 
 A Singapore air quality tracker for [TRMNL](https://trmnl.com).
 
-A halftone PSI map of all five NEA reporting regions, the headline reading for
-your region with its dominant pollutant, a 24-hour PM2.5 forecast, and how the
-neighbouring capitals compare — on one e-ink screen, sized to whichever TRMNL
-panel it lands on.
+A halftone map of all five NEA reporting regions, the headline reading for
+your region with the pollutant driving it, a 24-hour PM2.5 forecast, and how
+the neighbouring capitals compare — on one e-ink screen, sized to whichever
+TRMNL panel it lands on. Readable as US AQI, NEA PSI or raw PM2.5.
 
 ![Full screen on TRMNL OG](docs/screenshot-full.png)
 
-No server, no API keys, no hosting. TRMNL polls two free public APIs directly
-and the Liquid templates do the rest.
+No server and no hosting: TRMNL polls the public APIs directly and the Liquid
+templates do the rest. It works with no account at all — an optional, free
+aqicn.org token only changes where the US AQI comes from.
 
 ## Devices
 

@@ -180,8 +180,19 @@ into `fixtures/` is right for public data and wrong for anything personal.
 - Assert on shape and behaviour, never on real values.
 - Keep credentials out of committed files entirely. Secrets reach the plugin
   through custom fields or `polling_headers` referencing a field, and reach CI
-  through repository secrets.
-- Grep the staged diff for credential-shaped strings before the first commit.
+  through repository secrets. A polling URL can interpolate a field —
+  `token={{ my_token }}` — so the value never appears in `settings.yml`.
+- **`.trmnlp.yml` is the trap.** It is committed, and `serve` rewrites it
+  from the preview's Custom Fields picker, so a secret typed into that picker
+  lands in the repository without anyone deciding to put it there. Point the
+  field at the environment instead — `my_token: "{{ env.MY_TOKEN }}"` — keep
+  the value in a gitignored `.env.local`, and check that `.env*` really is
+  ignored before the first run rather than after.
+- Grep the staged diff for credential-shaped strings before the first commit,
+  and make it a test rather than a habit: fail the build on a literal secret
+  in a polling URL, a value written into `.trmnlp.yml`, a tracked `.env`, or
+  any credential-shaped string in a tracked file. Plant one to confirm the
+  guard actually fires.
 - Note that local preview polls the real endpoint. Decide deliberately whether
   `serve` should use live data or a local fixture server.
 

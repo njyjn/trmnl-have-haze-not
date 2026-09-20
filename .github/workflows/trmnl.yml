@@ -1,9 +1,18 @@
 name: trmnl
 
 on:
+  # Pull requests are never filtered: every change gets the full checks.
   pull_request:
+  # Pushes to main deploy, so skip the ones that cannot affect the screen --
+  # otherwise a README typo re-uploads the plugin to TRMNL. A commit touching
+  # both prose and the plugin still runs, since not all of its paths are
+  # ignored.
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'LICENSE'
 
 jobs:
   check:

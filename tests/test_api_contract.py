@@ -180,6 +180,28 @@ class TestPublishingMetadata(unittest.TestCase):
         self.assertIn("field_type: author_bio", SETTINGS,
                       "recipe review expects an author_bio field")
 
+    def test_field_descriptions_are_single_lines(self):
+        """No block scalars in custom_fields.
+
+        A folded `>-` description parses to one clean line locally, but the
+        line breaks survive into how TRMNL renders the field on the settings
+        and install pages. Published recipes keep each description on one
+        physical line, so this does too.
+        """
+        in_fields = False
+        for i, line in enumerate(SETTINGS.splitlines(), 1):
+            if line.startswith("custom_fields:"):
+                in_fields = True
+                continue
+            if in_fields and line and not line[0].isspace() and not line.startswith("-"):
+                in_fields = False
+            if in_fields and line.strip().startswith("description:"):
+                value = line.split("description:", 1)[1].strip()
+                self.assertTrue(value, "line %d: description is empty" % i)
+                self.assertNotIn(value[0], "|>",
+                                 "line %d: description uses a block scalar; keep it "
+                                 "on one line so TRMNL renders it as one paragraph" % i)
+
     def test_refresh_interval_respects_the_upstream_cadence(self):
         m = re.search(r"(?m)^refresh_interval: (\d+)$", SETTINGS)
         self.assertIsNotNone(m)

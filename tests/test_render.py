@@ -53,7 +53,7 @@ def _user_flags():
     return ["--user", "%d:%d" % (os.getuid(), os.getgid()), "--env", "HOME=/tmp"]
 
 
-def render(home_region, scale=None):
+def render(home_region, scale=None, waqi=False):
     """Render full.html in a throwaway copy configured for one region."""
     with tempfile.TemporaryDirectory() as tmp:
         project = pathlib.Path(tmp) / "plugin"
@@ -74,6 +74,10 @@ def render(home_region, scale=None):
             # so the override has to have that shape too.
             "IDX_1": json.loads((ROOT / "fixtures" / "pm25.json").read_text()),
             "IDX_2": {"data": json.loads((ROOT / "fixtures" / "open-meteo.json").read_text())},
+            # Without a token the request fails; pass the failure shape so the
+            # fallback path is what the default tests exercise.
+            "IDX_3": (json.loads((ROOT / "fixtures" / "waqi.json").read_text())
+                      if waqi else {"status": "error", "data": "Invalid key"}),
         }
         fields = {"home_region": home_region}
         if scale:
@@ -308,6 +312,54 @@ class TestScaleSwitching(unittest.TestCase):
         self.assertEqual(len(rows), 5)
         for name, shown, pm25, _ in rows:
             self.assertEqual(shown, pm25, "%s: scale column should be the PM2.5 value" % name)
+
+
+@unittest.skipUnless(docker_available(), "docker not available")
+class TestAqicnSource(unittest.TestCase):
+    """With a token the AQI is aqicn's measured figure; without one it falls
+    back to the value derived from NEA's hourly PM2.5, so the plugin keeps
+    working for anyone who never registers."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.measured = json.loads((ROOT / "fixtures" / "waqi.json").read_text())
+        cls.with_token = render("Central", scale="US AQI", waqi=True)
+        cls.without = render("Central", scale="US AQI", waqi=False)
+
+    def expected(self):
+        out = {}
+        for s in self.measured["data"]:
+            name = s["station"]["name"]
+            if name.endswith(", Singapore"):
+                out[name.split(",")[0].upper()] = str(s["aqi"])
+        return out
+
+    def map_values(self, html):
+        names = re.findall(r'text-anchor="middle">([A-Z]+)</text>', html)
+        nums = re.findall(r'aq-map__psi"[^>]*text-anchor="middle">([^<]*)</text>', html)
+        return dict(zip(names, nums))
+
+    def test_token_makes_every_region_match_aqicn_exactly(self):
+        self.assertEqual(self.map_values(self.with_token), self.expected())
+
+    def test_without_a_token_it_still_renders_numbers(self):
+        got = self.map_values(self.without)
+        self.assertEqual(sorted(got), sorted(self.expected()))
+        for region, v in got.items():
+            self.assertTrue(v.strip().isdigit(), "%s blank on the fallback path" % region)
+
+    def test_the_two_paths_actually_differ(self):
+        """If they matched, the token would be doing nothing."""
+        self.assertNotEqual(self.map_values(self.with_token), self.map_values(self.without))
+
+    def test_singapore_city_entry_agrees_with_the_headline(self):
+        """Singapore appears twice on screen; it must not show two numbers."""
+        _, _, headline, _ = HEADLINE.search(self.with_token).groups()
+        cities = re.findall(
+            r'label--small">([A-Z][a-z][^<]*)</span>\s*'
+            r'<span class="value value--small value--tnums">([^<]*)</span>', self.with_token)
+        sg = dict(cities)["Singapore"]
+        self.assertEqual(sg, headline)
 
 
 if __name__ == "__main__":

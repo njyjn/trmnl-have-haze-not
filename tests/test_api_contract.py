@@ -94,6 +94,31 @@ class TestHourlyPm25Fixture(unittest.TestCase):
                             "hourly and 24-hour PM2.5 are identical; check the field")
 
 
+class TestWaqiFixture(unittest.TestCase):
+    """Optional source: present only when a token is configured."""
+
+    def setUp(self):
+        path = FIXTURES / "waqi.json"
+        if not path.exists():
+            self.skipTest("no aqicn fixture; needs AQICN_API_TOKEN")
+        self.doc = json.loads(path.read_text())
+
+    def test_envelope(self):
+        self.assertEqual(self.doc["status"], "ok")
+        self.assertIsInstance(self.doc["data"], list)
+
+    def test_covers_every_region(self):
+        found = {s["station"]["name"].split(",")[0].lower()
+                 for s in self.doc["data"]
+                 if s["station"]["name"].endswith(", Singapore")}
+        self.assertEqual(found, set(REGIONS),
+                         "the bounding box must return all five NEA regions")
+
+    def test_each_station_reports_an_aqi(self):
+        for s in self.doc["data"]:
+            self.assertIsInstance(s["aqi"], (int, float, str))
+
+
 class TestOpenMeteoFixture(unittest.TestCase):
     def setUp(self):
         self.doc = load("open-meteo.json")

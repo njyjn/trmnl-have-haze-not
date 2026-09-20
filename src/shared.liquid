@@ -7,6 +7,7 @@
     IDX_1  data.gov.sg PM2.5        -> hourly PM2.5, same five regions
     IDX_2  Open-Meteo air quality   -> array root, wrapped by TRMNL as .data
            [0] Singapore (24h forecast), [1..4] regional cities
+    IDX_3  aqicn.org map/bounds    -> measured US AQI per region, token only
 {%- endcomment -%}
 
 {%- comment -%} BEGIN GENERATED MAP -- tools/build_map.py {%- endcomment -%}
@@ -34,6 +35,15 @@
 {%- assign pm25_1h = IDX_1.data.items[0].readings.pm25_one_hourly -%}
 {%- assign om = IDX_2.data -%}
 {%- assign om_sg = om[0] -%}
+{%- comment -%}
+  aqicn.org, when a token is configured. It reports the same NEA measurements
+  this plugin already polls, but as a finished US AQI, so using it removes the
+  derivation and matches what their site and most apps show exactly. Without a
+  token the request fails and everything falls back to the derived value, so
+  the plugin stays usable with no account at all.
+{%- endcomment -%}
+{%- assign has_waqi = false -%}
+{%- if IDX_3.status == 'ok' and IDX_3.data.size > 0 -%}{%- assign has_waqi = true -%}{%- endif -%}
 
 {%- comment -%} ---------- scale ---------- {%- endcomment -%}
 {%- comment -%}
@@ -158,9 +168,25 @@
       mixing a 1-hour PM2.5 sub-index with a 24-hour PM10 one would compare
       different windows. PM10 has never been the driver in this data anyway.
     {%- endcomment -%}
+    {%- comment -%}
+      Prefer the measured figure. Stations are matched on name ("West,
+      Singapore") rather than uid: the box already excludes Johor, but a
+      station added inside it would otherwise be read as a region.
+    {%- endcomment -%}
+    {%- assign rv = 0 -%}
+    {%- if has_waqi -%}
+      {%- for st in IDX_3.data -%}
+        {%- assign sname = st.station.name -%}
+        {%- if sname contains ', Singapore' -%}
+          {%- assign sregion = sname | split: ',' | first | downcase | strip -%}
+          {%- if sregion == rn -%}{%- assign rv = st.aqi -%}{%- break -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endif -%}
+    {%- if rv == 0 -%}
     {%- assign c25 = pm25_1h[rn] -%}
     {%- unless c25 -%}
-      {%- comment -%} Hourly feed unavailable: fall back rather than blank out. {%- endcomment -%}
+      {%- comment -%} Hourly feed unavailable too: fall back rather than blank out. {%- endcomment -%}
       {%- assign c25 = readings.pm25_twenty_four_hourly[rn] -%}
     {%- endunless -%}
     {%- assign a25 = 0 -%}
@@ -176,6 +202,7 @@
       {%- endif -%}
     {%- endfor -%}
     {%- assign rv = a25 -%}
+    {%- endif -%}
   {%- endif -%}
   {%- assign region_names = region_names | append: rn | append: ',' -%}
   {%- assign region_values = region_values | append: rv | append: ',' -%}
@@ -276,6 +303,10 @@
   {%- assign cv = 0 -%}
   {%- if scale_key == 'aqi' -%}
     {%- assign cv = city.current.us_aqi -%}
+    {%- if forloop.first and has_waqi -%}
+      {%- comment -%} Singapore is index 0; use the measured home-region value. {%- endcomment -%}
+      {%- assign cv = home_value -%}
+    {%- endif -%}
   {%- elsif scale_key == 'pm25' -%}
     {%- assign cv = city.current.pm2_5 | round -%}
   {%- else -%}

@@ -61,6 +61,7 @@ a pixel-sized SVG, or a nested `.layout`.
 | [data.gov.sg real-time PSI](https://data.gov.sg/datasets/d_fe37906a0182569d891506e815e819b7/view) (NEA) | 24-hour PSI, PM2.5/PM10 and pollutant sub-indices, five regions | no |
 | [data.gov.sg PM2.5](https://api-open.data.gov.sg/v2/real-time/api/pm25) (NEA) | hourly PM2.5, same five regions — what the AQI is derived from | no |
 | [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | 24-hour PM2.5 forecast, current PM2.5 and US AQI for the regional row | no |
+| [aqicn.org](https://aqicn.org/json-api/doc/) | measured US AQI per region | optional token |
 | [geoBoundaries](https://www.geoboundaries.org/) gbOpen SGP ADM0 | the coastline | n/a, baked in |
 
 NEA is the source for everything inside Singapore because it is the official
@@ -116,7 +117,7 @@ has no shared file.
 
 | Choice | Singapore regions | Regional cities |
 |---|---|---|
-| US AQI | derived from NEA's hourly PM2.5 | Open-Meteo's `us_aqi` |
+| US AQI | aqicn.org, or derived from NEA's hourly PM2.5 without a token | Open-Meteo's `us_aqi` |
 | NEA PSI | NEA's published PSI | derived from modelled PM2.5 |
 | PM2.5 | NEA's 24-hour average, µg/m³ | Open-Meteo's PM2.5, µg/m³ |
 
@@ -136,21 +137,45 @@ PM2.5 alone, for the same reason: NEA publishes no hourly PM10, and mixing a
 1-hour PM2.5 sub-index with a 24-hour PM10 one would compare different
 windows. PM10 has not been the driver in this data.
 
-### Why not aqicn's API
+### The AQICN token
 
-[aqicn.org](https://aqicn.org/city/singapore/west/) has per-region Singapore
-pages and a good API, but two things rule it out. It needs a free token per
-user, which would end this plugin's "no account or API key needed" property
-for everyone who installs it. And it is unnecessary: their own attribution
-reads *"measured by NEA"* — they re-serve the same feed this plugin already
-polls directly.
+Deriving an AQI lands close to what [aqicn.org](https://aqicn.org/city/singapore/west/)
+shows, but never exactly. The gap is not an error on either side: aqicn still
+uses the **pre-2024** EPA breakpoints, where Good topped at 12.0 µg/m³, while
+this plugin uses the current table revised in May 2024, where Good tops at
+9.0. Feeding NEA's hourly readings through the older table reproduces aqicn's
+numbers exactly, which is how the difference was identified.
 
-Checked region by region against their pages, the plugin now lands within 1–3
-points. The remainder is not an error on either side: aqicn still uses the
-**pre-2024** EPA breakpoints, where Good topped at 12.0µg/m³. Feeding NEA's
-hourly readings through that older table reproduces their numbers exactly for
-all five regions. This plugin uses the current table, revised in May 2024,
-where Good tops at 9.0.
+Rather than pick a side, set a token and the number *is* theirs. aqicn covers
+all five NEA regions as stations, and one
+[`map/bounds`](https://aqicn.org/json-api/doc/) request returns the lot:
+
+```
+https://api.waqi.info/map/bounds/?latlng=1.21,103.60,1.47,104.05&token=...
+```
+
+Tokens are free from [aqicn.org/data-platform/token](https://aqicn.org/data-platform/token/).
+Leave the field blank and the request fails harmlessly, the derived value
+takes over, and the plugin still needs no account at all.
+
+### Handling the token
+
+The repository is public, so the token has three ways to escape and each is
+closed off. `src/settings.yml` interpolates `{{ aqicn_token }}` and never
+holds a value. `.trmnlp.yml` is committed *and* rewritten by the preview's
+Custom Fields picker, so it reads `{{ env.AQICN_API_TOKEN }}` instead —
+put the value in `.env.local`, which is gitignored:
+
+```sh
+cp .env.example .env.local     # then fill it in
+set -a; . ./.env.local; set +a
+make serve
+```
+
+`tests/test_secrets.py` fails the build on a literal token in the polling
+URL, a value written into `.trmnlp.yml`, a tracked `.env` file, or any
+token-shaped string in a tracked file. `make check` redacts it from its own
+output.
 
 PSI runs the other way. It is a Singapore-only index, so for the comparison
 cities each modelled PM2.5 is put on NEA's own PM2.5 sub-index scale and the
@@ -160,6 +185,9 @@ is the particulate one — during haze, the one that drives it anyway.
 US AQI has six bands where PSI and PM2.5 have five, so nothing downstream
 assumes a count: the legend, the dot ramp and the band lookup all read the
 same per-scale lists.
+
+**AQICN token** — optional; see below. With one, the US AQI is aqicn's
+measured figure. Without, it is derived from NEA's hourly PM2.5.
 
 **Home region** — which of NEA's five reporting regions drives the big number
 and the box on the map. Defaults to Central.

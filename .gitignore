@@ -6,3 +6,9 @@ __pycache__/
 # Alternate icon renders; tools/build_icon.py reproduces any of them in
 # seconds, so only the one that gets uploaded is tracked.
 docs/icon-*.png
+
+# Secrets. The AQICN token lives here and must never be committed;
+# tools read it from the environment, never from a tracked file.
+.env
+.env.*
+!.env.example

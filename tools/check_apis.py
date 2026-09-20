@@ -16,10 +16,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import sys
 import unittest
 import urllib.request
+
+
+def redact(url, token):
+    """Never print the token, not even into a scrollback buffer."""
+    return url.replace(token, "<TOKEN>") if token else url
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 FIXTURES = ROOT / "fixtures"
@@ -60,24 +66,36 @@ def main() -> int:
     args = parser.parse_args()
 
     urls = polling_urls()
-    if len(urls) != 3:
-        print("error: expected 3 polling URLs in settings.yml, found %d" % len(urls), file=sys.stderr)
+    if len(urls) != 4:
+        print("error: expected 4 polling URLs in settings.yml, found %d" % len(urls), file=sys.stderr)
         return 1
+
+    # The aqicn URL carries {{ aqicn_token }}; fill it from the environment so
+    # this check exercises the same request TRMNL will make.
+    token = os.environ.get("AQICN_API_TOKEN", "")
+    urls = [u.replace("{{ aqicn_token }}", token) for u in urls]
 
     psi_url = next(u for u in urls if u.endswith("/psi"))
     pm25_url = next(u for u in urls if u.endswith("/pm25"))
     om_url = next(u for u in urls if "open-meteo" in u)
+    waqi_url = next(u for u in urls if "waqi.info" in u)
 
     for u in (psi_url, pm25_url):
         print("GET %s" % u)
     print("GET %s" % om_url[:96] + "...")
+    print("GET %s" % redact(waqi_url, token))
     psi = fetch(psi_url)
     pm25 = fetch(pm25_url)
     om = fetch(om_url)
+    waqi = fetch(waqi_url) if token else {"status": "error", "data": "no token"}
+    if not token:
+        print("  (AQICN_API_TOKEN unset -- skipping the aqicn check)")
 
     # Write to a scratch location first so the contract tests run against the
     # live payloads; only promote to fixtures/ if they pass.
     staged = {"psi.json": psi, "pm25.json": pm25, "open-meteo.json": om}
+    if token and waqi.get("status") == "ok":
+        staged["waqi.json"] = waqi
     backups = {name: (FIXTURES / name).read_text() for name in staged if (FIXTURES / name).exists()}
     for name, doc in staged.items():
         (FIXTURES / name).write_text(json.dumps(doc, indent=2))

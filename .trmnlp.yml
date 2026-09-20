@@ -10,6 +10,10 @@ watch:
   - src
 
 custom_fields:
+  # Read from the environment, never written here: this file is committed and
+  # `serve` rewrites it from the Custom Fields picker. Put the token in
+  # .env.local (gitignored) and `set -a; . ./.env.local; set +a` before serving.
+  aqicn_token: "{{ env.AQICN_API_TOKEN }}"
   scale: US AQI
   home_region: Central
 

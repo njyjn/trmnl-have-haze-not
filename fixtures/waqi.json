@@ -1,0 +1,55 @@
+{
+  "status": "ok",
+  "data": [
+    {
+      "lat": 1.296183,
+      "lon": 103.846181,
+      "uid": 1663,
+      "aqi": "72",
+      "station": {
+        "name": "South, Singapore",
+        "time": "2026-09-20T11:00:00+09:00"
+      }
+    },
+    {
+      "lat": 1.3645924,
+      "lon": 103.9477547,
+      "uid": 1664,
+      "aqi": "76",
+      "station": {
+        "name": "East, Singapore",
+        "time": "2026-09-20T11:00:00+09:00"
+      }
+    },
+    {
+      "lat": 1.3880078,
+      "lon": 103.698064,
+      "uid": 1665,
+      "aqi": "85",
+      "station": {
+        "name": "West, Singapore",
+        "time": "2026-09-20T11:00:00+09:00"
+      }
+    },
+    {
+      "lat": 1.3666667,
+      "lon": 103.8,
+      "uid": 1666,
+      "aqi": "78",
+      "station": {
+        "name": "Central, Singapore",
+        "time": "2026-09-20T11:00:00+09:00"
+      }
+    },
+    {
+      "lat": 1.4296436,
+      "lon": 103.7960862,
+      "uid": 1662,
+      "aqi": "74",
+      "station": {
+        "name": "North, Singapore",
+        "time": "2026-09-20T11:00:00+09:00"
+      }
+    }
+  ]
+}

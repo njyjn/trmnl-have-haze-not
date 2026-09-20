@@ -199,6 +199,12 @@ path, which needs a web app of your own. A recipe is a private plugin the
 TRMNL team has approved for public listing; installers get their own copy
 with their own `home_region`, and pushed changes reach everyone.
 
+Most of what it takes to build one of these is undocumented. What was learned
+here is written up in
+[docs/trmnl-plugin-harness.md](docs/trmnl-plugin-harness.md) — a generic
+playbook for giving any TRMNL plugin local preview, offline tests and CI
+deploys, which doubles as an agent prompt.
+
 ### Order of operations
 
 1. **Authenticate.** `trmnlp login` stores a token in

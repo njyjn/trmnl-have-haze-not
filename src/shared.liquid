@@ -29,13 +29,86 @@
 {%- assign om = IDX_1.data -%}
 {%- assign om_sg = om[0] -%}
 
+{%- comment -%} ---------- scale ---------- {%- endcomment -%}
+{%- comment -%}
+  Which index the screen speaks in. The field arrives as its option label
+  rather than a slug, so match loosely instead of on an exact string.
+{%- endcomment -%}
+{%- assign scale_raw = trmnl.plugin_settings.custom_fields_values.scale | default: 'US AQI' | downcase -%}
+{%- assign scale_key = 'aqi' -%}
+{%- if scale_raw contains 'psi' -%}{%- assign scale_key = 'psi' -%}
+{%- elsif scale_raw contains 'pm' -%}{%- assign scale_key = 'pm25' -%}{%- endif -%}
+
+{%- comment -%}
+  Breakpoint tables: "conc_lo,conc_hi,index_lo,index_hi" per segment.
+
+  EPA's table is the 2024 revision -- Good tops at 9.0ug/m3, not the 12.0 it
+  used to. It is defined on 24-hour averages, which is exactly what NEA
+  publishes, so a US AQI for each of the five regions is a conversion of
+  official Singapore measurements rather than a guess. No free source
+  publishes an AQI per Singapore region, so deriving it is the only way the
+  map keeps working when the scale changes.
+
+  NEA's own PM2.5 sub-index table is here to put foreign cities on the PSI
+  scale. Checked against live data: it reproduces NEA's published
+  pm25_sub_index to within the rounding their API applies to the
+  concentration it reports.
+{%- endcomment -%}
+{%- assign epa_pm25 = '0,9.0,0,50|9.1,35.4,51,100|35.5,55.4,101,150|55.5,125.4,151,200|125.5,225.4,201,300|225.5,325.4,301,500' | split: '|' -%}
+{%- assign epa_pm10 = '0,54,0,50|55,154,51,100|155,254,101,150|255,354,151,200|355,424,201,300|425,604,301,500' | split: '|' -%}
+{%- assign nea_pm25 = '0,12,0,50|12,55,50,100|55,150,100,200|150,250,200,300|250,500,300,500' | split: '|' -%}
+
+{%- comment -%}
+  US AQI has six bands to PSI's five, so nothing downstream may assume a
+  count -- the legend, the dot ramp and the band lookup all read these lists.
+{%- endcomment -%}
+{%- case scale_key -%}
+{%- when 'psi' -%}
+  {%- assign scale_name = 'PSI 24h' -%}
+  {%- assign scale_short = 'PSI' -%}
+  {%- assign scale_city_note = 'PSI scale &middot; derived from PM2.5' -%}
+  {%- assign band_edges = '50,100,200,300' | split: ',' -%}
+  {%- assign band_labels = 'Good,Moderate,Unhealthy,Very Unhealthy,Hazardous' | split: ',' -%}
+  {%- assign band_short = 'Good,Moderate,Unhealthy,V. unhealthy,Hazardous' | split: ',' -%}
+  {%- assign band_advice = 'Normal activities,Normal activities,Reduce outdoor exertion,Avoid outdoor activity,Stay indoors' | split: ',' -%}
+{%- when 'pm25' -%}
+  {%- assign scale_name = 'PM2.5 24h' -%}
+  {%- assign scale_short = 'PM2.5' -%}
+  {%- assign scale_city_note = '&micro;g/m&sup3; now' -%}
+  {%- assign band_edges = '12,55,150,250' | split: ',' -%}
+  {%- assign band_labels = 'Good,Moderate,Unhealthy,Very Unhealthy,Hazardous' | split: ',' -%}
+  {%- assign band_short = 'Good,Moderate,Unhealthy,V. unhealthy,Hazardous' | split: ',' -%}
+  {%- assign band_advice = 'Normal activities,Normal activities,Reduce outdoor exertion,Avoid outdoor activity,Stay indoors' | split: ',' -%}
+{%- else -%}
+  {%- assign scale_name = 'US AQI' -%}
+  {%- assign scale_short = 'AQI' -%}
+  {%- assign scale_city_note = 'US AQI now' -%}
+  {%- assign band_edges = '50,100,150,200,300' | split: ',' -%}
+  {%- assign band_labels = 'Good,Moderate,Unhealthy for Sensitive,Unhealthy,Very Unhealthy,Hazardous' | split: ',' -%}
+  {%- assign band_short = 'Good,Moderate,Sensitive,Unhealthy,V. unhealthy,Hazardous' | split: ',' -%}
+  {%- assign band_advice = 'Normal activities,Normal activities,Sensitive groups take care,Reduce outdoor exertion,Avoid outdoor activity,Stay indoors' | split: ',' -%}
+{%- endcase -%}
+{%- assign band_count = band_labels.size -%}
+
+{%- comment -%}
+  Dot radius per band, at the 8px hex spacing the lattice is built on. Ink
+  coverage tops out near a third of each cell: enough that a one-band step
+  reads, light enough that the island stays a map rather than a block. Both
+  ramps span the same range so the map looks consistent across scales.
+{%- endcomment -%}
+{%- if band_count == 6 -%}
+  {%- assign band_radii = '0.6,1.0,1.4,1.8,2.2,2.6' | split: ',' -%}
+{%- else -%}
+  {%- assign band_radii = '0.6,1.1,1.6,2.1,2.6' | split: ',' -%}
+{%- endif -%}
+
 {%- comment -%} ---------- home region ---------- {%- endcomment -%}
 {%- comment -%}
   The custom field arrives as the option label ("West"), not the slug, so it
   has to be downcased before it will match NEA's keys. An unrecognised value
   must fall back rather than read as nil: every `nil <= n` comparison below is
-  false, which would walk the band chain to its end and report Hazardous with
-  a blank number -- the most alarming reading, from no data at all.
+  false, which would walk the band chain to its end and report the worst band
+  with a blank number -- the most alarming reading, from no data at all.
 {%- endcomment -%}
 {%- assign home_region = trmnl.plugin_settings.custom_fields_values.home_region | default: 'central' | downcase | strip -%}
 {%- assign home_psi = psi_all[home_region] -%}
@@ -52,26 +125,79 @@
 {%- if om_sg.hourly.pm2_5 -%}{%- assign has_forecast = true -%}{%- endif -%}
 
 {%- comment -%}
-  NEA PSI bands. Band drives both the headline wording and the halftone dot
-  radius on the map, so it is the one scale the whole screen agrees on.
+  One value per region, in map_layers order, so everything downstream can
+  index by position instead of re-deriving. Values stay strings out of the
+  append; coerce with `| plus: 0` before comparing.
 {%- endcomment -%}
-{%- assign home_band = 5 -%}
-{%- assign home_band_label = 'Hazardous' -%}
-{%- assign home_band_advice = 'Stay indoors' -%}
-{%- if home_psi <= 50 -%}
-  {%- assign home_band = 1 -%}{%- assign home_band_label = 'Good' -%}{%- assign home_band_advice = 'Normal activities' -%}
-{%- elsif home_psi <= 100 -%}
-  {%- assign home_band = 2 -%}{%- assign home_band_label = 'Moderate' -%}{%- assign home_band_advice = 'Normal activities' -%}
-{%- elsif home_psi <= 200 -%}
-  {%- assign home_band = 3 -%}{%- assign home_band_label = 'Unhealthy' -%}{%- assign home_band_advice = 'Reduce outdoor exertion' -%}
-{%- elsif home_psi <= 300 -%}
-  {%- assign home_band = 4 -%}{%- assign home_band_label = 'Very Unhealthy' -%}{%- assign home_band_advice = 'Avoid outdoor activity' -%}
+{%- assign region_names = '' -%}
+{%- assign region_values = '' -%}
+{%- if has_psi -%}
+{%- for layer in map_layers -%}
+  {%- assign rn = layer | split: '|' | first -%}
+  {%- assign rv = 0 -%}
+  {%- if scale_key == 'psi' -%}
+    {%- assign rv = psi_all[rn] -%}
+  {%- elsif scale_key == 'pm25' -%}
+    {%- assign rv = readings.pm25_twenty_four_hourly[rn] -%}
+  {%- else -%}
+    {%- comment -%} US AQI is the worst sub-index; NEA gives both particulates. {%- endcomment -%}
+    {%- assign c25 = readings.pm25_twenty_four_hourly[rn] -%}
+    {%- assign c10 = readings.pm10_twenty_four_hourly[rn] -%}
+    {%- assign a25 = 0 -%}
+    {%- if c25 > 325.4 -%}{%- assign a25 = 500 -%}{%- endif -%}
+    {%- for seg in epa_pm25 -%}
+      {%- assign sp = seg | split: ',' -%}
+      {%- assign clo = sp[0] | plus: 0 -%}{%- assign chi = sp[1] | plus: 0 -%}
+      {%- if c25 >= clo and c25 <= chi -%}
+        {%- assign ilo = sp[2] | plus: 0 -%}{%- assign ihi = sp[3] | plus: 0 -%}
+        {%- assign si = ihi | minus: ilo -%}{%- assign sc = chi | minus: clo -%}
+        {%- assign a25 = c25 | minus: clo | times: si | times: 1.0 | divided_by: sc | plus: ilo | round -%}
+        {%- break -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- assign a10 = 0 -%}
+    {%- if c10 > 604 -%}{%- assign a10 = 500 -%}{%- endif -%}
+    {%- for seg in epa_pm10 -%}
+      {%- assign sp = seg | split: ',' -%}
+      {%- assign clo = sp[0] | plus: 0 -%}{%- assign chi = sp[1] | plus: 0 -%}
+      {%- if c10 >= clo and c10 <= chi -%}
+        {%- assign ilo = sp[2] | plus: 0 -%}{%- assign ihi = sp[3] | plus: 0 -%}
+        {%- assign si = ihi | minus: ilo -%}{%- assign sc = chi | minus: clo -%}
+        {%- assign a10 = c10 | minus: clo | times: si | times: 1.0 | divided_by: sc | plus: ilo | round -%}
+        {%- break -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- assign rv = a25 -%}
+    {%- if a10 > rv -%}{%- assign rv = a10 -%}{%- endif -%}
+  {%- endif -%}
+  {%- assign region_names = region_names | append: rn | append: ',' -%}
+  {%- assign region_values = region_values | append: rv | append: ',' -%}
+{%- endfor -%}
 {%- endif -%}
+{%- assign region_names = region_names | split: ',' -%}
+{%- assign region_values = region_values | split: ',' -%}
+
+{%- assign home_index = 0 -%}
+{%- for rn in region_names -%}
+  {%- if rn == home_region -%}{%- assign home_index = forloop.index0 -%}{%- break -%}{%- endif -%}
+{%- endfor -%}
+{%- assign home_value = region_values[home_index] | plus: 0 -%}
+
+{%- comment -%} Band is the one thing the headline, the map and the legend agree on. {%- endcomment -%}
+{%- assign home_band = band_count -%}
+{%- for e in band_edges -%}
+  {%- assign edge = e | plus: 0 -%}
+  {%- if home_value <= edge -%}{%- assign home_band = forloop.index -%}{%- break -%}{%- endif -%}
+{%- endfor -%}
+{%- assign band_i = home_band | minus: 1 -%}
+{%- assign home_band_label = band_labels[band_i] -%}
+{%- assign home_band_advice = band_advice[band_i] -%}
 
 {%- comment -%}
   NEA publishes PSI as the highest pollutant sub-index, so the dominant
-  pollutant is whichever sub-index is largest. NO2 is excluded from PSI and
-  has no sub-index, which is why it is absent here.
+  pollutant is whichever sub-index is largest. It is reported whatever scale
+  is on screen, because it answers a different question: what is driving the
+  number. NO2 is excluded from PSI and has no sub-index, hence its absence.
 {%- endcomment -%}
 {%- assign dom_name = 'PM2.5' -%}
 {%- assign dom_value = readings.pm25_sub_index[home_region] -%}
@@ -118,22 +244,18 @@
 {%- endif -%}
 
 {%- comment -%}
-  Dot radius per PSI band, at the 8px hex spacing the lattice is built on.
-  Ink coverage runs about 2/7/14/24/36% -- enough that a one-band step is
-  obvious, light enough that the island still reads as a map rather than a
-  solid block. The map and the legend in full.liquid both index this list, so
-  they cannot drift apart.
-{%- endcomment -%}
-{%- assign band_radii = '0.6,1.1,1.6,2.1,2.6' | split: ',' -%}
+  The regional row follows whichever scale is on screen, so the headline and
+  the comparison are never in different units.
 
-{%- comment -%}
-  The regional row compares PM2.5 in ug/m3, not an index. PSI and US AQI are
-  different national scales with different breakpoints and averaging windows,
-  so putting Singapore's PSI beside another city's AQI invites a comparison
-  the reader cannot actually make. A raw concentration is the same quantity
-  everywhere. Singapore is included, from the same model and the same hour as
-  the others, so the row is like-for-like; it reads lower than the NEA PM2.5
-  above it because that one is a measured 24-hour average, labelled as such.
+  US AQI and PM2.5 come straight from Open-Meteo. PSI does not exist outside
+  Singapore, so for that scale each city's modelled PM2.5 is put on NEA's own
+  PM2.5 sub-index -- labelled as derived, because a real PSI is the worst of
+  six pollutants and this is the particulate one. During haze that is the one
+  that drives it anyway.
+
+  Singapore is in the row too, from the same model and hour as the others, so
+  the comparison is like-for-like. It can differ from the headline, which is
+  NEA's measured 24-hour reading rather than a model's view of this hour.
 
   Open-Meteo returns locations in request order and does not echo place names,
   so these labels must stay in step with the coordinate order in polling_url.
@@ -142,6 +264,30 @@
 {%- endcomment -%}
 {%- assign city_names = 'Singapore,Kuala Lumpur,Jakarta,Bangkok,Manila' | split: ',' -%}
 {%- assign om_cities = om -%}
+{%- assign city_values = '' -%}
+{%- for city in om_cities -%}
+  {%- assign cv = 0 -%}
+  {%- if scale_key == 'aqi' -%}
+    {%- assign cv = city.current.us_aqi -%}
+  {%- elsif scale_key == 'pm25' -%}
+    {%- assign cv = city.current.pm2_5 | round -%}
+  {%- else -%}
+    {%- assign cc = city.current.pm2_5 -%}
+    {%- if cc > 500 -%}{%- assign cv = 500 -%}{%- endif -%}
+    {%- for seg in nea_pm25 -%}
+      {%- assign sp = seg | split: ',' -%}
+      {%- assign clo = sp[0] | plus: 0 -%}{%- assign chi = sp[1] | plus: 0 -%}
+      {%- if cc >= clo and cc <= chi -%}
+        {%- assign ilo = sp[2] | plus: 0 -%}{%- assign ihi = sp[3] | plus: 0 -%}
+        {%- assign si = ihi | minus: ilo -%}{%- assign sc = chi | minus: clo -%}
+        {%- assign cv = cc | minus: clo | times: si | times: 1.0 | divided_by: sc | plus: ilo | round -%}
+        {%- break -%}
+      {%- endif -%}
+    {%- endfor -%}
+  {%- endif -%}
+  {%- assign city_values = city_values | append: cv | append: ',' -%}
+{%- endfor -%}
+{%- assign city_values = city_values | split: ',' -%}
 
 {%- comment -%}
   The map is captured once here rather than repeated in full.liquid and
@@ -155,15 +301,15 @@
       {%- for layer in map_layers -%}
         {%- assign parts = layer | split: '|' -%}
         {%- assign rname = parts[0] -%}
-        {%- assign rpsi = psi_all[rname] -%}
+        {%- assign rval = region_values[forloop.index0] | plus: 0 -%}
         {%- comment -%} Same banding as the headline: dot size is the legend. {%- endcomment -%}
-        {%- assign band = 5 -%}
-        {%- if rpsi <= 50 -%}{%- assign band = 1 -%}
-        {%- elsif rpsi <= 100 -%}{%- assign band = 2 -%}
-        {%- elsif rpsi <= 200 -%}{%- assign band = 3 -%}
-        {%- elsif rpsi <= 300 -%}{%- assign band = 4 -%}{%- endif -%}
-        {%- assign band_i = band | minus: 1 -%}
-        {%- assign dot_r = band_radii[band_i] -%}
+        {%- assign band = band_count -%}
+        {%- for e in band_edges -%}
+          {%- assign edge = e | plus: 0 -%}
+          {%- if rval <= edge -%}{%- assign band = forloop.index -%}{%- break -%}{%- endif -%}
+        {%- endfor -%}
+        {%- assign bidx = band | minus: 1 -%}
+        {%- assign dot_r = band_radii[bidx] -%}
         {%- assign dots = parts[1] | split: ' ' -%}
         <g>
           {%- for d in dots -%}
@@ -179,7 +325,7 @@
         {%- assign lparts = lab | split: '|' -%}
         {%- assign lname = lparts[0] -%}
         {%- assign lxy = lparts[1] | split: ',' -%}
-        {%- assign lpsi = psi_all[lname] -%}
+        {%- assign lval = region_values[forloop.index0] -%}
         {%- assign ly = lxy[1] | plus: 0 -%}
         {%- comment -%}
           A rounded box frames both label lines; a circle large enough to clear
@@ -194,7 +340,7 @@
         {%- assign ly_name = ly | minus: 3 -%}
         {%- assign ly_psi = ly | plus: 15 -%}
         <text class="aq-map__halo" x="{{ lxy[0] }}" y="{{ ly_name }}" text-anchor="middle">{{ lname | upcase }}</text>
-        <text class="aq-map__halo aq-map__psi" x="{{ lxy[0] }}" y="{{ ly_psi }}" text-anchor="middle">{{ lpsi }}</text>
+        <text class="aq-map__halo aq-map__psi" x="{{ lxy[0] }}" y="{{ ly_psi }}" text-anchor="middle">{{ lval }}</text>
       {%- endfor -%}
     </svg>
   {%- endif -%}

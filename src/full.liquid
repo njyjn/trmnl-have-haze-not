@@ -21,22 +21,28 @@
           The legend is the only thing that makes dot size readable as a
           number, so it sits directly under the map at the same dot sizes.
         {%- endcomment -%}
-        <svg class="aq-legend" viewBox="0 0 430 30" width="100%">
-          {%- assign legend_labels = 'Good,Moderate,Unhealthy,V. unhealthy,Hazardous' | split: ',' -%}
-          {%- for lbl in legend_labels -%}
-            {%- assign lr = band_radii[forloop.index0] -%}
-            {%- assign lx = forloop.index0 | times: 88 | plus: 8 -%}
-            <circle cx="{{ lx }}" cy="9" r="{{ lr }}"/>
-            <text x="{{ lx | plus: 8 }}" y="13">{{ lbl }}</text>
+        {%- comment -%}
+          Columns are spaced by band count, not a fixed step, because US AQI
+          has six bands to PSI's five. Dot above label above boundary, all
+          centred: setting the label beside its dot collides with the next
+          dot once six columns have to fit. The scale's name is in the
+          headline, so the row only needs its numbers.
+        {%- endcomment -%}
+        {%- assign col_w = 430 | divided_by: band_count -%}
+        {%- assign half_w = col_w | divided_by: 2 -%}
+        <svg class="aq-legend" viewBox="0 0 430 40" width="100%">
+          {%- for lbl in band_short -%}
+            {%- assign cx = forloop.index0 | times: col_w | plus: half_w -%}
+            <circle cx="{{ cx }}" cy="8" r="{{ band_radii[forloop.index0] }}"/>
+            <text x="{{ cx }}" y="24" text-anchor="middle">{{ lbl }}</text>
+            {%- if forloop.first -%}
+              <text class="aq-legend__scale" x="{{ cx }}" y="37" text-anchor="middle">0</text>
+            {%- else -%}
+              {%- assign prev = forloop.index0 | minus: 1 -%}
+              {%- assign edge = band_edges[prev] | plus: 1 -%}
+              <text class="aq-legend__scale" x="{{ cx }}" y="37" text-anchor="middle">{{ edge }}{% if forloop.last %}+{% endif %}</text>
+            {%- endif -%}
           {%- endfor -%}
-          {%- comment -%} "PSI" and "0" are placed separately; a space between
-            them collapses too far in the tabular-numeral face. {%- endcomment -%}
-          <text class="aq-legend__scale" x="0" y="28">PSI</text>
-          <text class="aq-legend__scale" x="28" y="28">0</text>
-          <text class="aq-legend__scale" x="88" y="28">51</text>
-          <text class="aq-legend__scale" x="176" y="28">101</text>
-          <text class="aq-legend__scale" x="264" y="28">201</text>
-          <text class="aq-legend__scale" x="352" y="28">301+</text>
         </svg>
 
         <div class="border--h-5"></div>
@@ -50,7 +56,7 @@
         <div class="aq-regions">
           <div class="grid grid--cols-4">
             <span class="label label--small">Region</span>
-            <span class="label label--small">PSI</span>
+            <span class="label label--small">{{ scale_short }}</span>
             <span class="label label--small">PM2.5</span>
             <span class="label label--small">PM10</span>
           </div>
@@ -59,7 +65,7 @@
             {%- assign rname = layer | split: '|' | first -%}
             <div class="grid grid--cols-4">
               <span class="title title--small">{{ rname | capitalize }}</span>
-              <span class="value value--xsmall value--tnums">{{ psi_all[rname] }}</span>
+              <span class="value value--xsmall value--tnums">{{ region_values[forloop.index0] }}</span>
               <span class="value value--xsmall value--tnums">{{ readings.pm25_twenty_four_hourly[rname] }}</span>
               <span class="value value--xsmall value--tnums">{{ readings.pm10_twenty_four_hourly[rname] }}</span>
             </div>
@@ -67,13 +73,13 @@
         </div>
 
         <div class="aq-cities">
-        <span class="label label--small">Regional &middot; PM2.5 &micro;g/m&sup3; now</span>
+        <span class="label label--small">Regional &middot; {{ scale_city_note }}</span>
         <div class="flex flex--between gap--small">
           {%- for city in om_cities -%}
             <div class="item item--shrink">
               <div class="content">
                 <span class="label label--small">{{ city_names[forloop.index0] }}</span>
-                <span class="value value--small value--tnums">{{ city.current.pm2_5 | round }}</span>
+                <span class="value value--small value--tnums">{{ city_values[forloop.index0] }}</span>
               </div>
             </div>
           {%- endfor -%}
@@ -85,8 +91,8 @@
         <div class="aq-block">
         <div class="item">
           <div class="content">
-            <span class="label label--small">PSI 24h &middot; {{ home_label }}</span>
-            <span class="value value--xxxlarge value--tnums">{{ home_psi }}</span>
+            <span class="label label--small">{{ scale_name }} &middot; {{ home_label }}</span>
+            <span class="value value--xxxlarge value--tnums">{{ home_value }}</span>
             <span class="title title--small">{{ home_band_label }}</span>
             <span class="description description--base">{{ home_band_advice }}</span>
           </div>

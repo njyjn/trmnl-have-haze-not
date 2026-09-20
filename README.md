@@ -59,7 +59,7 @@ a pixel-sized SVG, or a nested `.layout`.
 | Source | Used for | Key needed |
 |---|---|---|
 | [data.gov.sg real-time PSI](https://data.gov.sg/datasets/d_fe37906a0182569d891506e815e819b7/view) (NEA) | the five regional PSI readings, PM2.5/PM10, pollutant sub-indices | no |
-| [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | 24-hour PM2.5 forecast, current PM2.5 for the regional row | no |
+| [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | 24-hour PM2.5 forecast, current PM2.5 and US AQI for the regional row | no |
 | [geoBoundaries](https://www.geoboundaries.org/) gbOpen SGP ADM0 | the coastline | n/a, baked in |
 
 NEA is the source for everything inside Singapore because it is the official
@@ -111,6 +111,31 @@ has no shared file.
 
 ## Settings
 
+**Scale** — which index the screen speaks in. Defaults to **US AQI**.
+
+| Choice | Singapore regions | Regional cities |
+|---|---|---|
+| US AQI | derived from NEA's PM2.5 and PM10 | Open-Meteo's `us_aqi` |
+| NEA PSI | NEA's published PSI | derived from modelled PM2.5 |
+| PM2.5 | NEA's 24-hour average, µg/m³ | Open-Meteo's PM2.5, µg/m³ |
+
+No free source publishes an AQI per Singapore *region* — Open-Meteo's model
+runs on a ~11 km grid that cannot tell one part of the island from another —
+so US AQI is computed from NEA's own measurements using EPA's published
+breakpoints. Those are defined on 24-hour averages, which is exactly what NEA
+reports, so it is a conversion of official readings rather than a guess. The
+value shown is the worse of the PM2.5 and PM10 sub-indices, matching how the
+US AQI is defined.
+
+PSI runs the other way. It is a Singapore-only index, so for the comparison
+cities each modelled PM2.5 is put on NEA's own PM2.5 sub-index scale and the
+row is labelled as derived. A real PSI is the worst of six pollutants and this
+is the particulate one — during haze, the one that drives it anyway.
+
+US AQI has six bands where PSI and PM2.5 have five, so nothing downstream
+assumes a count: the legend, the dot ramp and the band lookup all read the
+same per-scale lists.
+
 **Home region** — which of NEA's five reporting regions drives the big number
 and the box on the map. Defaults to Central.
 
@@ -148,21 +173,16 @@ block between the `BEGIN GENERATED MAP` / `END GENERATED MAP` markers in
 `src/shared.liquid`. The generated block is committed; CI re-runs the script
 and fails if the committed output has drifted from its inputs.
 
-### The regional row, and why it is not an index
+### The regional row
 
-The row compares PM2.5 in µg/m³ rather than an air quality index. PSI and US
-AQI are different national scales with different breakpoints and averaging
-windows, so Singapore's PSI 108 beside Jakarta's US AQI 210 invites a
-comparison the reader cannot actually make. A raw concentration is the same
-quantity everywhere. Singapore is in the row too, from the same model and the
-same hour as the others, so the comparison is like-for-like.
+The row always follows the chosen scale, so the headline and the comparison
+are never in different units — mixing them invites a comparison the reader
+cannot actually make.
 
-It reads lower than the PM2.5 shown for your region above it, and that is
-expected: the row is Open-Meteo's modelled value for this hour, while the
-region figure is NEA's measured 24-hour average. Both are labelled.
-
-`tests/test_build_map.py` fails the build if `us_aqi` reappears anywhere in
-`src/`, including in the polling URL.
+Singapore is in the row too, from the same model and hour as the other
+cities, so the comparison is like-for-like. It can differ from the headline
+above it: the row is Open-Meteo's modelled view of this hour, the headline is
+NEA's measured 24-hour reading. Both are labelled.
 
 ### Changing the comparison cities
 

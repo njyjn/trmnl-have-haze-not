@@ -10,8 +10,8 @@
       <div class="column aq-col--headline">
         <div class="item">
           <div class="content">
-            <span class="label label--small">PSI 24h &middot; {{ home_label }}</span>
-            <span class="value value--xxlarge value--tnums">{{ home_psi }}</span>
+            <span class="label label--small">{{ scale_name }} &middot; {{ home_label }}</span>
+            <span class="value value--xxlarge value--tnums">{{ home_value }}</span>
             <span class="title title--small">{{ home_band_label }}</span>
           </div>
         </div>
@@ -25,7 +25,7 @@
             <div class="item item--shrink">
               <div class="content">
                 <span class="label label--small">{{ rname | slice: 0, 1 | upcase }}</span>
-                <span class="value value--small value--tnums">{{ psi_all[rname] }}</span>
+                <span class="value value--small value--tnums">{{ region_values[forloop.index0] }}</span>
               </div>
             </div>
           {%- endfor -%}

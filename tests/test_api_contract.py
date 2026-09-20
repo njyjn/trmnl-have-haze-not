@@ -58,16 +58,16 @@ class TestPsiFixture(unittest.TestCase):
                 self.assertIsInstance(readings[key][region], (int, float))
 
     def test_region_metadata_matches_the_baked_map(self):
-        baked = json.loads((ROOT / "tools" / "data" / "psi-regions.json").read_text())
-        live = self.doc["data"]["regionMetadata"]
-        self.assertEqual([r["name"] for r in live], [r["name"] for r in baked])
-        for a, b in zip(live, baked):
-            self.assertAlmostEqual(
-                a["labelLocation"]["latitude"], b["labelLocation"]["latitude"], places=4
-            )
-            self.assertAlmostEqual(
-                a["labelLocation"]["longitude"], b["labelLocation"]["longitude"], places=4
-            )
+        # Keyed by name, not by position: the API returns regionMetadata in a
+        # varying order and never promised otherwise. Rendering looks regions
+        # up by name, so only the names and coordinates have to agree.
+        baked = {r["name"]: r["labelLocation"]
+                 for r in json.loads((ROOT / "tools" / "data" / "psi-regions.json").read_text())}
+        live = {r["name"]: r["labelLocation"] for r in self.doc["data"]["regionMetadata"]}
+        self.assertEqual(sorted(live), sorted(baked))
+        for name, loc in live.items():
+            self.assertAlmostEqual(loc["latitude"], baked[name]["latitude"], places=4)
+            self.assertAlmostEqual(loc["longitude"], baked[name]["longitude"], places=4)
 
 
 class TestOpenMeteoFixture(unittest.TestCase):

@@ -8,7 +8,7 @@ framework_version: latest
 serverless_language:
 polling_url: |-
   https://api-open.data.gov.sg/v2/real-time/api/psi
-  https://air-quality-api.open-meteo.com/v1/air-quality?latitude=1.3521,3.139,-6.2088,13.7563,14.5995&longitude=103.8198,101.6869,106.8456,100.5018,120.9842&current=pm2_5&hourly=pm2_5&forecast_hours=24&past_hours=0&timezone=Asia%2FSingapore
+  https://air-quality-api.open-meteo.com/v1/air-quality?latitude=1.3521,3.139,-6.2088,13.7563,14.5995&longitude=103.8198,101.6869,106.8456,100.5018,120.9842&current=pm2_5,us_aqi&hourly=pm2_5&forecast_hours=24&past_hours=0&timezone=Asia%2FSingapore
 polling_headers: ''
 polling_body:
 id: 482229
@@ -19,6 +19,19 @@ custom_fields:
   description: A Singapore air quality tracker. Shows the National Environment Agency's PSI for all five reporting regions as a halftone map, the reading for your region with its dominant pollutant, a 24-hour PM2.5 forecast, and how neighbouring capitals compare. Readings from <a href="https://data.gov.sg/datasets/d_fe37906a0182569d891506e815e819b7/view" class="underline" target="_blank">data.gov.sg</a>, forecast from <a href="https://open-meteo.com/en/docs/air-quality-api" class="underline" target="_blank">Open-Meteo</a>. No account or API key needed.
   github_url: https://github.com/njyjn/trmnl-have-haze-not
   learn_more_url: https://www.haze.gov.sg/
+- keyname: scale
+  field_type: select
+  name: Scale
+  description: >-
+    Which index the readings are shown in. US AQI is the scale most air
+    quality apps use. NEA PSI is Singapore's official index. PM2.5 skips the
+    index and shows the raw concentration.
+  options:
+  - US AQI
+  - NEA PSI
+  - PM2.5
+  default: US AQI
+
 - keyname: home_region
   field_type: select
   name: Home region

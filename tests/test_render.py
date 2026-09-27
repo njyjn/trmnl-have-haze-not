@@ -53,8 +53,11 @@ def _user_flags():
     return ["--user", "%d:%d" % (os.getuid(), os.getgid()), "--env", "HOME=/tmp"]
 
 
-def render(home_region, scale=None, waqi=False):
-    """Render full.html in a throwaway copy configured for one region."""
+def render(home_region, scale=None, waqi=False, mutate=None):
+    """Render full.html in a throwaway copy configured for one region.
+
+    `mutate`, if given, edits the fixture overrides in place before the
+    render, to simulate a feed that is missing data."""
     with tempfile.TemporaryDirectory() as tmp:
         project = pathlib.Path(tmp) / "plugin"
         shutil.copytree(
@@ -79,6 +82,8 @@ def render(home_region, scale=None, waqi=False):
             "IDX_3": (json.loads((ROOT / "fixtures" / "waqi.json").read_text())
                       if waqi else {"status": "error", "data": "Invalid key"}),
         }
+        if mutate:
+            mutate(overrides)
         fields = {"home_region": home_region}
         if scale:
             fields["scale"] = scale
@@ -364,3 +369,47 @@ class TestAqicnSource(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(docker_available(), "docker not available")
+class TestMissingData(unittest.TestCase):
+    """A value a feed did not send must read as missing, never as zero:
+    zero is the cleanest air on every scale, so it would look like good news."""
+
+    def test_home_region_missing_reads_as_no_reading(self):
+        def drop(o):
+            o["IDX_0"]["data"]["items"][0]["readings"]["pm25_twenty_four_hourly"]["central"] = None
+        html = render("Central", scale="PM2.5", mutate=drop)
+        _, _, value, band = HEADLINE.search(html).groups()
+        self.assertEqual(value, "–")
+        self.assertEqual(band, "No reading")
+
+    def test_region_missing_on_the_map_has_a_dash_and_no_dots(self):
+        def drop(o):
+            o["IDX_0"]["data"]["items"][0]["readings"]["pm25_twenty_four_hourly"]["east"] = None
+            o["IDX_1"]["data"]["items"][0]["readings"]["pm25_one_hourly"]["east"] = None
+        html = render("Central", mutate=drop)
+        names = re.findall(r'data-aq="name"[^>]*>([A-Z]+)</text>', html)
+        nums = re.findall(r'data-aq="value"[^>]*>([^<]*)</text>', html)
+        self.assertEqual(dict(zip(names, nums))["EAST"], "–")
+        _, _, value, _ = HEADLINE.search(html).groups()
+        self.assertTrue(value.isdigit(), "a missing neighbour must not blank the headline")
+
+    def test_offline_aqicn_station_falls_back_to_nea(self):
+        def offline(o):
+            for s in o["IDX_3"]["data"]:
+                if s["station"]["name"].startswith("Central"):
+                    s["aqi"] = "-"
+        html = render("Central", scale="US AQI", waqi=True, mutate=offline)
+        _, _, value, band = HEADLINE.search(html).groups()
+        _, _, nea_value, _ = HEADLINE.search(render("Central", scale="US AQI")).groups()
+        self.assertEqual(value, nea_value,
+                         "offline station should fall back to NEA, got %r" % value)
+        self.assertNotEqual(band, "No reading")
+
+    def test_empty_forecast_says_so(self):
+        def empty(o):
+            o["IDX_2"]["data"][0]["hourly"]["pm2_5"] = []
+        html = render("Central", mutate=empty)
+        self.assertIn("Forecast unavailable", html)
+

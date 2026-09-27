@@ -29,6 +29,8 @@ custom_fields:
   placeholder: 1a2b3c...
   optional: true
 
+# Select values arrive exactly as written below ("US AQI", "Central");
+# shared.liquid downcases them before matching, so casing here is free.
 - keyname: scale
   field_type: select
   name: Scale

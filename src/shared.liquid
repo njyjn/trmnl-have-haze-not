@@ -165,7 +165,7 @@
 {%- assign has_psi = false -%}
 {%- if psi_item.timestamp and psi_all and home_psi -%}{%- assign has_psi = true -%}{%- endif -%}
 {%- assign has_forecast = false -%}
-{%- if om_sg.hourly.pm2_5 -%}{%- assign has_forecast = true -%}{%- endif -%}
+{%- if om_sg.hourly.pm2_5.size > 1 -%}{%- assign has_forecast = true -%}{%- endif -%}
 
 {%- comment -%}
   One value per region, in map_layers order, so everything downstream can
@@ -207,7 +207,7 @@
         {%- assign sname = st.station.name -%}
         {%- if sname contains ', Singapore' -%}
           {%- assign sregion = sname | split: ',' | first | downcase | strip -%}
-          {%- if sregion == rn -%}{%- assign rv = st.aqi -%}{%- break -%}{%- endif -%}
+          {%- if sregion == rn and st.aqi != '-' -%}{%- assign rv = st.aqi -%}{%- break -%}{%- endif -%}
         {%- endif -%}
       {%- endfor -%}
     {%- endif -%}
@@ -230,8 +230,14 @@
       {%- endif -%}
     {%- endfor -%}
     {%- assign rv = a25 -%}
+    {%- unless c25 -%}{%- assign rv = nil -%}{%- endunless -%}
     {%- endif -%}
   {%- endif -%}
+  {%- comment -%}
+    A region NEA did not report shows as a dash. Treating it as zero would
+    draw it as the cleanest air on the map.
+  {%- endcomment -%}
+  {%- if rv == nil or rv == '' -%}{%- assign rv = '–' -%}{%- endif -%}
   {%- assign region_names = region_names | append: rn | append: ',' -%}
   {%- assign region_values = region_values | append: rv | append: ',' -%}
 {%- endfor -%}
@@ -243,7 +249,10 @@
 {%- for rn in region_names -%}
   {%- if rn == home_region -%}{%- assign home_index = forloop.index0 -%}{%- break -%}{%- endif -%}
 {%- endfor -%}
-{%- assign home_value = region_values[home_index] | plus: 0 -%}
+{%- assign home_raw = region_values[home_index] -%}
+{%- assign has_home_value = true -%}
+{%- if home_raw == '–' or home_raw == nil -%}{%- assign has_home_value = false -%}{%- endif -%}
+{%- assign home_value = home_raw | plus: 0 -%}
 
 {%- comment -%} Band is the one thing the headline, the map and the legend agree on. {%- endcomment -%}
 {%- assign home_band = band_count -%}
@@ -254,6 +263,11 @@
 {%- assign band_i = home_band | minus: 1 -%}
 {%- assign home_band_label = band_labels[band_i] -%}
 {%- assign home_band_advice = band_advice[band_i] -%}
+{%- unless has_home_value -%}
+  {%- assign home_value = '–' -%}
+  {%- assign home_band_label = 'No reading' -%}
+  {%- assign home_band_advice = 'NEA has not reported this region yet' -%}
+{%- endunless -%}
 
 {%- comment -%}
   NEA publishes PSI as the highest pollutant sub-index, so the dominant
@@ -272,8 +286,8 @@
 {%- assign cmp = readings.co_sub_index[home_region] -%}
 {%- if cmp > dom_value -%}{%- assign dom_name = 'CO' -%}{%- assign dom_value = cmp -%}{%- endif -%}
 
-{%- assign home_pm25 = readings.pm25_twenty_four_hourly[home_region] -%}
-{%- assign home_pm10 = readings.pm10_twenty_four_hourly[home_region] -%}
+{%- assign home_pm25 = readings.pm25_twenty_four_hourly[home_region] | default: '–' -%}
+{%- assign home_pm10 = readings.pm10_twenty_four_hourly[home_region] | default: '–' -%}
 
 {%- comment -%} ---------- 24h PM2.5 forecast sparkline ---------- {%- endcomment -%}
 {%- assign spark_w = 300 -%}
@@ -337,10 +351,6 @@
   {%- assign cv = 0 -%}
   {%- if scale_key == 'aqi' -%}
     {%- assign cv = city.current.us_aqi -%}
-    {%- if forloop.first and has_waqi -%}
-      {%- comment -%} Singapore is index 0; use the measured home-region value. {%- endcomment -%}
-      {%- assign cv = home_value -%}
-    {%- endif -%}
   {%- elsif scale_key == 'pm25' -%}
     {%- assign cv = city.current.pm2_5 | round -%}
   {%- else -%}
@@ -357,6 +367,13 @@
       {%- endif -%}
     {%- endfor -%}
   {%- endif -%}
+  {%- if scale_key == 'aqi' -%}
+    {%- unless city.current.us_aqi -%}{%- assign cv = '–' -%}{%- endunless -%}
+  {%- else -%}
+    {%- unless city.current.pm2_5 -%}{%- assign cv = '–' -%}{%- endunless -%}
+  {%- endif -%}
+  {%- comment -%} Singapore is index 0; with a token, use the measured home-region value. {%- endcomment -%}
+  {%- if forloop.first and scale_key == 'aqi' and has_waqi -%}{%- assign cv = home_value -%}{%- endif -%}
   {%- assign city_values = city_values | append: cv | append: ',' -%}
 {%- endfor -%}
 {%- assign city_values = city_values | split: ',' -%}
@@ -383,6 +400,8 @@
         {%- assign bidx = band | minus: 1 -%}
         {%- assign dot_r = band_radii[bidx] -%}
         {%- assign dots = parts[1] | split: ' ' -%}
+        {%- comment -%} No reading, no dots: an empty region reads as missing, not clean. {%- endcomment -%}
+        {%- if region_values[forloop.index0] == '–' -%}{%- assign dots = '' | split: ' ' -%}{%- endif -%}
         <g>
           {%- for d in dots -%}
             {%- assign xy = d | split: ',' -%}

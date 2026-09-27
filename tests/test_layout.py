@@ -95,6 +95,24 @@ class TestNoStyleBlock(unittest.TestCase):
                 self.assertIn('font-family="Inter', tag, "%s.liquid: svg without a font" % name)
 
 
+class TestDarkMode(unittest.TestCase):
+    """Dark mode swaps the framework's black and white. A hard-coded #000
+    in an SVG vanishes on the black background, so SVG ink follows
+    currentColor and halos use text--white (the background in both modes)."""
+
+    def test_no_hard_coded_black_or_white(self):
+        for name in LAYOUTS + ("shared",):
+            text = (SRC / ("%s.liquid" % name)).read_text()
+            text = re.sub(r'data:image/[^"]+', "", text)
+            self.assertNotRegex(text, r'(?i)(fill|stroke)="#(000|fff)(000|fff)?"',
+                                "%s.liquid hard-codes a colour dark mode cannot swap" % name)
+
+    def test_halos_use_the_background_colour(self):
+        self.assertIn('class="text--white" stroke="currentColor"', SHARED)
+        self.assertNotIn("dark:text--black", SHARED,
+                         "dark mode already swaps text--white to black; the override undoes it")
+
+
 class TestLayoutIsNotNested(unittest.TestCase):
     """.layout is width:var(--screen-w);height:var(--screen-h)."""
 

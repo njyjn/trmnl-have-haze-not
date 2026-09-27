@@ -25,9 +25,9 @@
       {%- if fc_min < 55 and fc_max > 55 -%}
         {%- assign rule_y = 55 | minus: fc_min | times: spark_plot_h | times: 1.0 | divided_by: fc_span | plus: spark_pad -%}
         {%- assign rule_y = spark_h | minus: rule_y | round: 1 -%}
-        <line class="aq-spark__rule" stroke="#000" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" x1="0" y1="{{ rule_y }}" x2="{{ spark_w }}" y2="{{ rule_y }}"/>
+        <line class="aq-spark__rule" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" x1="0" y1="{{ rule_y }}" x2="{{ spark_w }}" y2="{{ rule_y }}"/>
       {%- endif -%}
-      <polyline class="aq-spark__line" fill="none" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
+      <polyline class="aq-spark__line" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
     </svg>
     <div class="flex flex--between">
       <span class="label label--small label--gray-out 1bit:text--black">now {{ fc_now | round }}</span>
@@ -105,7 +105,7 @@
         {%- endcomment -%}
         {%- assign col_w = 430 | divided_by: band_count -%}
         {%- assign half_w = col_w | divided_by: 2 -%}
-        <svg class="aq-legend block value--tnums" viewBox="0 0 430 40" width="100%" font-family="Inter Variable, Inter, sans-serif">
+        <svg class="aq-legend block value--tnums" viewBox="0 0 430 40" width="100%" font-family="Inter Variable, Inter, sans-serif" fill="currentColor">
           {%- for lbl in band_short -%}
             {%- assign cx = forloop.index0 | times: col_w | plus: half_w -%}
             <circle cx="{{ cx }}" cy="8" r="{{ band_radii[forloop.index0] }}"/>

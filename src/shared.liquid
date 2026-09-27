@@ -369,7 +369,7 @@
 {%- endcomment -%}
 {%- capture map_svg -%}
   {%- if has_psi -%}
-    <svg class="aq-map block value--tnums" viewBox="0 0 {{ map_w }} {{ map_h }}" width="100%" font-family="Inter Variable, Inter, sans-serif">
+    <svg class="aq-map block value--tnums" viewBox="0 0 {{ map_w }} {{ map_h }}" width="100%" font-family="Inter Variable, Inter, sans-serif" fill="currentColor">
       {%- for layer in map_layers -%}
         {%- assign parts = layer | split: '|' -%}
         {%- assign rname = parts[0] -%}
@@ -391,7 +391,7 @@
         </g>
       {%- endfor -%}
 
-      <path d="{{ map_coast }}" fill="none" stroke="#000" stroke-width="1"/>
+      <path d="{{ map_coast }}" fill="none" stroke="currentColor" stroke-width="1"/>
 
       {%- for lab in map_labels -%}
         {%- assign lparts = lab | split: '|' -%}
@@ -406,13 +406,24 @@
         {%- if lname == home_region -%}
           {%- assign box_x = lxy[0] | minus: 36 -%}
           {%- assign box_y = ly | minus: 17 -%}
-          <rect x="{{ box_x }}" y="{{ box_y }}" width="72" height="38" rx="6" fill="#fff" stroke="#fff" stroke-width="5"/>
-          <rect x="{{ box_x }}" y="{{ box_y }}" width="72" height="38" rx="6" fill="none" stroke="#000" stroke-width="2"/>
+          <rect class="text--white" x="{{ box_x }}" y="{{ box_y }}" width="72" height="38" rx="6" fill="currentColor" stroke="currentColor" stroke-width="5"/>
+          <rect x="{{ box_x }}" y="{{ box_y }}" width="72" height="38" rx="6" fill="none" stroke="currentColor" stroke-width="2"/>
         {%- endif -%}
         {%- assign ly_name = ly | minus: 3 -%}
         {%- assign ly_psi = ly | plus: 15 -%}
-        <text class="aq-map__halo" x="{{ lxy[0] }}" y="{{ ly_name }}" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="0.04em" stroke="#fff" stroke-width="3" paint-order="stroke">{{ lname | upcase }}</text>
-        <text class="aq-map__halo aq-map__psi" x="{{ lxy[0] }}" y="{{ ly_psi }}" text-anchor="middle" font-size="17" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">{{ lval }}</text>
+        {%- comment -%}
+          Each label is drawn twice: a halo in the background colour that
+          clears the dots, then the text in the foreground colour. SVG cannot
+          give one element a fill and a stroke from two different colours
+          through currentColor. text--white is the background colour in
+          both modes: dark mode swaps the framework's black and white.
+        {%- endcomment -%}
+        <g class="text--white" stroke="currentColor" stroke-width="3">
+          <text class="aq-map__halo" x="{{ lxy[0] }}" y="{{ ly_name }}" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="0.04em">{{ lname | upcase }}</text>
+          <text class="aq-map__halo" x="{{ lxy[0] }}" y="{{ ly_psi }}" text-anchor="middle" font-size="17" font-weight="700">{{ lval }}</text>
+        </g>
+        <text class="aq-map__name" x="{{ lxy[0] }}" y="{{ ly_name }}" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="0.04em">{{ lname | upcase }}</text>
+        <text class="aq-map__psi" x="{{ lxy[0] }}" y="{{ ly_psi }}" text-anchor="middle" font-size="17" font-weight="700">{{ lval }}</text>
       {%- endfor -%}
     </svg>
   {%- endif -%}

@@ -6,8 +6,8 @@
       <span class="title title--small">No air quality data</span>
     </div>
   {%- else -%}
-    <div class="columns aq-cols gap--medium">
-      <div class="column aq-col--headline">
+    <div class="grid grid--cols-3 w--full">
+      <div class="col--span-1 portrait:col--span-3 flex--col flex--stretch-x flex--center-y">
         <div class="item">
           <div class="content">
             <span class="label label--small">{{ scale_name }} &middot; {{ home_label }}</span>
@@ -17,7 +17,7 @@
         </div>
       </div>
 
-      <div class="column aq-col--rest">
+      <div class="col--span-2 portrait:col--span-3 flex--col flex--stretch-x gap--small">
         <span class="label label--small">All regions</span>
         <div class="flex flex--between gap--small">
           {%- for layer in map_layers -%}

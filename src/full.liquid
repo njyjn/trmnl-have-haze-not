@@ -3,7 +3,71 @@
   cities. Right column: the headline reading, pollutants, and the 24h forecast.
   Every variable used here is derived in shared.liquid, which TRMNL prepends
   to this file.
+
+  Layout is framework classes throughout: a 12-column grid split 7/5 on the
+  OG and 8/4 on the X (whose extra width goes to the map), and a single
+  column in portrait. The framework grid cannot reorder its cells, so the
+  readings, which sit above the map in portrait, are captured once and
+  emitted twice: beside the map, hidden in portrait, and above the grid,
+  shown only in portrait.
 {%- endcomment -%}
+
+{%- capture fc_block -%}
+  {%- if has_forecast -%}
+    <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
+    <svg class="aq-spark" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
+      {%- comment -%} NEA calls 1h PM2.5 above 55 elevated; show it when it is in range. {%- endcomment -%}
+      {%- if fc_min < 55 and fc_max > 55 -%}
+        {%- assign rule_y = 55 | minus: fc_min | times: spark_plot_h | times: 1.0 | divided_by: fc_span | plus: spark_pad -%}
+        {%- assign rule_y = spark_h | minus: rule_y | round: 1 -%}
+        <line class="aq-spark__rule" vector-effect="non-scaling-stroke" x1="0" y1="{{ rule_y }}" x2="{{ spark_w }}" y2="{{ rule_y }}"/>
+      {%- endif -%}
+      <polyline class="aq-spark__line" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
+    </svg>
+    <div class="flex flex--between">
+      <span class="label label--small label--gray-out 1bit:text--black">now {{ fc_now | round }}</span>
+      <span class="label label--small label--gray-out 1bit:text--black">peak {{ fc_max | round }}</span>
+      <span class="label label--small label--gray-out 1bit:text--black">{{ fc_times | last | date: '%-l%P' }} {{ fc_end | round }}</span>
+    </div>
+  {%- else -%}
+    <span class="label label--small label--gray-out 1bit:text--black">Forecast unavailable</span>
+  {%- endif -%}
+{%- endcapture -%}
+
+{%- capture headline_block -%}
+  <div class="item">
+    <div class="content">
+      <span class="label label--small">{{ scale_name }} &middot; {{ home_label }}</span>
+      <span class="value value--xxxlarge value--tnums">{{ home_value }}</span>
+      <span class="title title--small">{{ home_band_label }}</span>
+      <span class="description description--base">{{ home_band_advice }}</span>
+    </div>
+  </div>
+{%- endcapture -%}
+
+{%- capture pollutant_block -%}
+  <div class="grid grid--cols-3 gap--small">
+    <div class="item item--shrink">
+      <div class="content">
+        <span class="label label--small">Dominant</span>
+        <span class="value value--small">{{ dom_name }}</span>
+      </div>
+    </div>
+    <div class="item item--shrink">
+      <div class="content">
+        <span class="label label--small">PM2.5</span>
+        <span class="value value--small value--tnums">{{ home_pm25 }}</span>
+      </div>
+    </div>
+    <div class="item item--shrink">
+      <div class="content">
+        <span class="label label--small">PM10</span>
+        <span class="value value--small value--tnums">{{ home_pm10 }}</span>
+      </div>
+    </div>
+  </div>
+  <span class="label label--small label--gray-out 1bit:text--black">24-hour average, &micro;g/m&sup3;</span>
+{%- endcapture -%}
 
 <div class="layout layout--col">
   {%- if has_psi == false -%}
@@ -12,16 +76,23 @@
       <span class="description">data.gov.sg did not return a PSI reading</span>
     </div>
   {%- else -%}
-    <div class="columns aq-cols gap--medium">
+    {%- comment -%} Portrait only: the readings as a row above the map. {%- endcomment -%}
+    <div class="hidden portrait:block w--full">
+      <div class="grid grid--cols-3">
+        <div>{{ headline_block }}</div>
+        <div>{{ pollutant_block }}</div>
+        <div>{{ fc_block }}</div>
+      </div>
+    </div>
 
-      <div class="column aq-col--map">
+    <div class="grid grid--cols-12 w--full">
+
+      <div class="col--span-7 lg:col--span-8 lg:portrait:col--span-12 flex--col flex--stretch-x gap--small">
         {{ map_svg }}
 
         {%- comment -%}
           The legend is the only thing that makes dot size readable as a
           number, so it sits directly under the map at the same dot sizes.
-        {%- endcomment -%}
-        {%- comment -%}
           Columns are spaced by band count, not a fixed step, because US AQI
           has six bands to PSI's five. Dot above label above boundary, all
           centred: setting the label beside its dot collides with the next
@@ -48,12 +119,10 @@
         <div class="border--h-5"></div>
 
         {%- comment -%}
-          Panels squarer than 3:2 (the X) have height this layout has no
-          content for. Rather than pad it out, spend it on the readings the
-          map can only show as a dot size. Hidden on the OG, where there is
-          no room -- see the .aq-regions rules in shared.liquid.
+          The X has height the OG does not, so it gets the per-region
+          readings the map can only show as a dot size.
         {%- endcomment -%}
-        <div class="aq-regions">
+        <div class="hidden lg:block">
           <div class="grid grid--cols-4">
             <span class="label label--small">Region</span>
             <span class="label label--small">{{ scale_short }}</span>
@@ -72,82 +141,27 @@
           {%- endfor -%}
         </div>
 
-        <div class="aq-cities">
-        <span class="label label--small">Regional &middot; {{ scale_city_note }}</span>
-        <div class="flex flex--between gap--small">
-          {%- for city in om_cities -%}
-            <div class="item item--shrink">
-              <div class="content">
-                <span class="label label--small">{{ city_names[forloop.index0] }}</span>
-                <span class="value value--small value--tnums">{{ city_values[forloop.index0] }}</span>
+        <div>
+          <span class="label label--small">Regional &middot; {{ scale_city_note }}</span>
+          <div class="flex flex--between gap--small">
+            {%- for city in om_cities -%}
+              <div class="item item--shrink">
+                <div class="content">
+                  <span class="label label--small">{{ city_names[forloop.index0] }}</span>
+                  <span class="value value--small value--tnums">{{ city_values[forloop.index0] }}</span>
+                </div>
               </div>
-            </div>
-          {%- endfor -%}
-        </div>
+            {%- endfor -%}
+          </div>
         </div>
       </div>
 
-      <div class="column aq-col--side">
-        <div class="aq-block">
-        <div class="item">
-          <div class="content">
-            <span class="label label--small">{{ scale_name }} &middot; {{ home_label }}</span>
-            <span class="value value--xxxlarge value--tnums">{{ home_value }}</span>
-            <span class="title title--small">{{ home_band_label }}</span>
-            <span class="description description--base">{{ home_band_advice }}</span>
-          </div>
-        </div>
-        </div>
-
+      <div class="col--span-5 lg:col--span-4 portrait:hidden flex--col flex--stretch-x flex--center-y gap--small">
+        {{ headline_block }}
         <div class="border--h-5"></div>
-
-        <div class="aq-block">
-        <div class="grid grid--cols-3 gap--small">
-          <div class="item item--shrink">
-            <div class="content">
-              <span class="label label--small">Dominant</span>
-              <span class="value value--small">{{ dom_name }}</span>
-            </div>
-          </div>
-          <div class="item item--shrink">
-            <div class="content">
-              <span class="label label--small">PM2.5</span>
-              <span class="value value--small value--tnums">{{ home_pm25 }}</span>
-            </div>
-          </div>
-          <div class="item item--shrink">
-            <div class="content">
-              <span class="label label--small">PM10</span>
-              <span class="value value--small value--tnums">{{ home_pm10 }}</span>
-            </div>
-          </div>
-        </div>
-        <span class="label label--small label--gray-out 1bit:text--black">24-hour average, &micro;g/m&sup3;</span>
-        </div>
-
+        <div>{{ pollutant_block }}</div>
         <div class="border--h-5"></div>
-
-        <div class="aq-block">
-        {%- if has_forecast -%}
-          <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
-          <svg class="aq-spark" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
-            {%- comment -%} NEA calls 1h PM2.5 above 55 elevated; show it when it is in range. {%- endcomment -%}
-            {%- if fc_min < 55 and fc_max > 55 -%}
-              {%- assign rule_y = 55 | minus: fc_min | times: spark_plot_h | times: 1.0 | divided_by: fc_span | plus: spark_pad -%}
-              {%- assign rule_y = spark_h | minus: rule_y | round: 1 -%}
-              <line class="aq-spark__rule" vector-effect="non-scaling-stroke" x1="0" y1="{{ rule_y }}" x2="{{ spark_w }}" y2="{{ rule_y }}"/>
-            {%- endif -%}
-            <polyline class="aq-spark__line" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
-          </svg>
-          <div class="flex flex--between">
-            <span class="label label--small label--gray-out 1bit:text--black">now {{ fc_now | round }}</span>
-            <span class="label label--small label--gray-out 1bit:text--black">peak {{ fc_max | round }}</span>
-            <span class="label label--small label--gray-out 1bit:text--black">{{ fc_times | last | date: '%-l%P' }} {{ fc_end | round }}</span>
-          </div>
-        {%- else -%}
-          <span class="label label--small label--gray-out 1bit:text--black">Forecast unavailable</span>
-        {%- endif -%}
-        </div>
+        <div>{{ fc_block }}</div>
       </div>
 
     </div>

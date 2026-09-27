@@ -30,30 +30,66 @@ def rules(prefix):
     return out
 
 
+def spans(cls):
+    """{breakpoint prefix: span} for one grid cell's class list."""
+    out = {}
+    for prefix, n in re.findall(r"(?:^|\s)((?:[a-z]+:)*)col--span-(\d+)", cls):
+        out[prefix] = int(n)
+    return out
+
+
+def cells(text):
+    """Class lists of every grid cell (anything with a col--span)."""
+    return [c for c in re.findall(r'class="([^"]*)"', text) if "col--span-" in c]
+
+
 class TestColumnsAreProportional(unittest.TestCase):
-    def test_no_pixel_widths_on_columns(self):
-        for sel, body in rules(".aq-col"):
-            self.assertNotRegex(
-                body, r"width:\s*\d+px",
-                "%s sets a pixel width; use a flex-basis percentage" % sel,
-            )
-            self.assertNotRegex(
-                body, r"flex:[^;]*\b\d+px",
-                "%s sets a pixel flex-basis; use a percentage" % sel,
-            )
+    """Columns come from the framework grid, so they are fractions of the
+    panel by construction. What can still go wrong is spans that do not add
+    up, which leaves a gap or wraps a column onto a second row."""
 
-    def test_every_column_has_a_percentage_basis(self):
-        bases = re.findall(r"\.aq-col--\w+\s*\{[^}]*flex:\s*[\d.]+\s+[\d.]+\s+([\d.]+%)", STYLE)
-        self.assertGreaterEqual(len(bases), 4, "expected a basis for each column class")
+    def test_full_spans_fill_the_grid_at_each_size(self):
+        full = (SRC / "full.liquid").read_text()
+        self.assertIn("grid grid--cols-12", full)
+        map_cell, side_cell = [spans(c) for c in cells(full)]
+        self.assertEqual(map_cell[""] + side_cell[""], 12, "OG split does not fill 12")
+        self.assertEqual(map_cell["lg:"] + side_cell["lg:"], 12, "X split does not fill 12")
+        self.assertGreater(map_cell["lg:"], map_cell[""], "the X's extra width should go to the map")
 
-    def test_layouts_do_not_use_fixed_width_utilities_for_columns(self):
+    def test_half_horizontal_spans_fill_the_grid(self):
+        text = (SRC / "half_horizontal.liquid").read_text()
+        self.assertIn("grid grid--cols-3", text)
+        self.assertEqual(sum(spans(c)[""] for c in cells(text)), 3)
+
+    def test_grid_cells_do_not_use_fixed_width_utilities(self):
         for name in LAYOUTS:
             text = (SRC / ("%s.liquid" % name)).read_text()
-            for m in re.finditer(r'class="[^"]*\bcolumn\b[^"]*"', text):
-                self.assertNotRegex(
-                    m.group(0), r"\bw--\d+\b",
-                    "%s.liquid pins a column with a fixed-width utility" % name,
-                )
+            for c in cells(text):
+                self.assertNotRegex(c, r"\bw--\d+\b",
+                                    "%s.liquid pins a column with a fixed-width utility" % name)
+
+    def test_cells_stretch_across_only(self):
+        """flex--stretch stretches both axes: it gives every child flex:1 1 0,
+        which splits the column height evenly and shrinks the map to fit.
+        flex--stretch-x is the cross-axis-only one."""
+        for name in LAYOUTS:
+            text = (SRC / ("%s.liquid" % name)).read_text()
+            self.assertNotRegex(text, r"\bflex--stretch(?![-\w])",
+                                "%s.liquid uses both-axis flex--stretch" % name)
+
+
+class TestStyleIsSvgOnly(unittest.TestCase):
+    """Layout is framework classes; the <style> block is only for the insides
+    of the SVGs, which framework classes cannot reach."""
+
+    def test_every_rule_targets_an_svg(self):
+        for sel, _ in re.findall(r"([^{}]+)\{([^{}]*)\}", re.sub(r"/\*.*?\*/", "", STYLE, flags=re.S)):
+            for part in sel.split(","):
+                self.assertRegex(part.strip(), r"^\.aq-(map|legend|spark)\b",
+                                 "%r is layout CSS; use framework classes" % part.strip())
+
+    def test_no_media_queries(self):
+        self.assertNotIn("@media", STYLE)
 
 
 class TestLayoutIsNotNested(unittest.TestCase):
@@ -106,44 +142,38 @@ class TestSvgsScale(unittest.TestCase):
 
 
 class TestConditionalDetail(unittest.TestCase):
-    """The extra block ships in the markup everywhere but only lays out
-    where there is height for it."""
+    """The X has height the OG does not; the per-region table fills it."""
 
-    def test_hidden_by_default(self):
-        self.assertRegex(STYLE, r"\.aq-regions\s*\{[^}]*display:\s*none")
-
-    def test_enabled_inside_the_aspect_query(self):
-        query = re.search(r"@media \(max-aspect-ratio[^{]*\{(.*?)\n  \}", STYLE, re.S)
-        self.assertIsNotNone(query, "aspect-ratio query not found")
-        self.assertRegex(query.group(1), r"\.aq-regions\s*\{[^}]*display:\s*block")
-
-    def test_markup_is_present_unconditionally(self):
+    def test_region_table_only_on_the_x(self):
         full = (SRC / "full.liquid").read_text()
-        self.assertIn('class="aq-regions"', full)
+        block = re.search(r'<div class="hidden lg:block">(.*?)\{%- endfor -%\}', full, re.S)
+        self.assertIsNotNone(block, "region table is not gated on lg:")
+        self.assertIn("pm10_twenty_four_hourly", block.group(1))
 
 
 class TestPortrait(unittest.TestCase):
     """Portrait is a review requirement (OG landscape, X landscape, X portrait)
     and it is the orientation nothing else exercises."""
 
-    def test_columns_stack(self):
-        self.assertRegex(STYLE, r"\.screen--portrait \.aq-cols\s*\{[^}]*flex-direction:\s*column")
+    def setUp(self):
+        self.full = (SRC / "full.liquid").read_text()
 
-    def test_stacked_columns_reclaim_their_width(self):
-        """.trmnl .column sets width:0 and leans on flex-basis, which does
-        nothing once width is the cross axis -- the columns collapse to zero.
-        The override needs three classes to outrank it on specificity."""
-        rule = re.search(r"\.screen--portrait \.aq-cols > \.column\s*\{([^}]*)\}", STYLE)
-        self.assertIsNotNone(rule, "no width override for stacked columns")
-        self.assertRegex(rule.group(1), r"width:\s*(100%|auto)")
+    def test_map_takes_the_full_width(self):
+        map_cell = spans(cells(self.full)[0])
+        self.assertEqual(map_cell.get("lg:portrait:"), 12)
+
+    def test_side_column_steps_aside(self):
+        self.assertIn("portrait:hidden", cells(self.full)[1])
 
     def test_readings_lead_the_stack(self):
-        self.assertRegex(STYLE, r"\.screen--portrait \.aq-col--side\s*\{[^}]*order:\s*-1")
-
-    def test_side_blocks_exist_to_lay_out_as_a_row(self):
-        full = (SRC / "full.liquid").read_text()
-        self.assertEqual(full.count('class="aq-block"'), 3,
-                         "portrait lays the side column out as three blocks")
+        """The grid cannot reorder, so the readings are emitted again above
+        it, shown only in portrait."""
+        row = self.full.index('<div class="hidden portrait:block')
+        grid = self.full.index('<div class="grid grid--cols-12')
+        self.assertLess(row, grid)
+        for block in ("headline_block", "pollutant_block", "fc_block"):
+            self.assertEqual(self.full.count("{{ %s }}" % block), 2,
+                             "%s should render beside the map and in the portrait row" % block)
 
 
 class TestOneBitLegibility(unittest.TestCase):

@@ -5,7 +5,7 @@
   to this file.
 {%- endcomment -%}
 
-<div class="layout aq-screen">
+<div class="layout layout--col">
   {%- if has_psi == false -%}
     <div class="flex flex--col flex--center h--full">
       <span class="title title--large">No air quality data</span>
@@ -154,8 +154,4 @@
   {%- endif -%}
 </div>
 
-<div class="title_bar">
-  <img class="image" src="{{ title_icon }}" alt="">
-  <span class="title">Have Haze Not</span>
-  <span class="instance">NEA {{ psi_item.timestamp | date: '%-d %b %-l%P' }}</span>
-</div>
+{%- render 'title_bar', icon: title_icon, instance: nea_stamp -%}

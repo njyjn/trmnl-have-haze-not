@@ -33,8 +33,27 @@
 {%- endcomment -%}
 {%- assign title_icon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAQAAAAAYLlVAAAB70lEQVR42u2Z4dnEEAyAM4hFDGIQixjEIBYxiCPa4lrfp1ekP/DcPde7nrySiFQAiua40864Uc340TnUmhdu3YxmLyE828ymacV/IxCIzxG87ala9IVJrnfpjrTzjzogsn/yg4Fhpyk0gSNuC2ABLIAfAUJmYakArBP+byGG8w5R7DaAdgzF712PBpAoRm5XohAe+0AAmwnk/jO/EJ/gugPIS3HnrvydzL/Xm0LTBZ9hJ1yo+znc7MJ3WZmlLO5rALAVdbdgXDmuqXoN9Jr/X+vCYt9/Z0UEgZrVfgdIAoJRdKaHGyZgDwCiEHkYMc03AJkWJxQPxX8vU3tvGZqu4neNmHYAPgAAqpsXzJh/cMxmE8ghALIdgA0BUFVHhLMBWCcIcawm4QF0G4BAa8kt3Ygw7La9ZSbO/JM5QRkyo7qMHyTEMIUDSEzAZDaj+pz1s+3YHqHU4rJR+ErDmp/DzS2AmOnpLaAqRDK4P3Dc+c/C+YPEDMqLfTfb086UDUUNcFwnrLD4s9QUygRMoPqjG7JDC7JYJxz1o/Fbs93fCSDZ0W66UBepVt8THcjzFv61I4jZT0Z5vFJuzukNlHEwV/ScwyMYad/1eL4AFsACaAMgP6wmP66nLliQl2xeULQiL9u9oHD5gtLtC4rXVOX7D2hsa3q4nW1kAAAAAElFTkSuQmCC" -%}
 
+{%- comment -%}
+  The title bar every layout ends with. `render` isolates scope, so the icon
+  and the right-hand label are passed in; omit `instance` for no label.
+  The closing tag must be exactly "{% endtemplate %}" -- trmnl-liquid matches
+  it as a literal string, so a whitespace-trimming "-" hides it.
+{%- endcomment -%}
+{% template title_bar %}
+<div class="title_bar">
+  <img class="image image-dither" src="{{ icon }}" alt="">
+  <span class="title">Have Haze Not</span>
+  {%- if instance != blank %}
+  <span class="instance">{{ instance }}</span>
+  {%- endif %}
+</div>
+{% endtemplate %}
+
 {%- comment -%} ---------- sources ---------- {%- endcomment -%}
 {%- assign psi_item = IDX_0.data.items[0] -%}
+{%- comment -%} Title bar labels: the date where there is room, the hour where there is not. {%- endcomment -%}
+{%- capture nea_stamp -%}NEA {{ psi_item.timestamp | date: '%-d %b %-l%P' }}{%- endcapture -%}
+{%- capture nea_hour -%}{{ psi_item.timestamp | date: '%-l%P' }}{%- endcapture -%}
 {%- assign readings = psi_item.readings -%}
 {%- assign psi_all = readings.psi_twenty_four_hourly -%}
 {%- comment -%}
@@ -400,6 +419,9 @@
 {%- endcapture -%}
 
 <style>
+  /* Framework classes do the layout wherever they can. What is left here is
+     what they cannot express: styling inside the map, legend and sparkline
+     SVGs, the proportional column split, and the reflow for X portrait. */
   /* Without display:block + height:auto the SVG has no intrinsic height in a
      flex column and the whole layout collapses. */
   .aq-map, .aq-legend, .aq-spark { display: block; width: 100%; height: auto; }
@@ -416,10 +438,10 @@
      1040x780 logical px, with BYOD sizes in between, so a fixed column
      width leaves the map stranded and the lower third of the X empty.
 
-     The pair is centred as one block rather than each column separately:
+     The pair is centred as one block (by .layout.layout--col) rather than
+     each column separately:
      the columns are different heights, and centring them individually
      misaligns their tops. */
-  .aq-screen { display: flex; flex-direction: column; justify-content: center; height: 100%; }
   .aq-cols { display: flex; align-items: stretch; height: auto; }
   .aq-col--map,
   .aq-col--side {

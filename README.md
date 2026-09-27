@@ -259,7 +259,7 @@ once you have adapted the templates.
 | Layout | Shows |
 |---|---|
 | `full` | map, legend, regional cities, headline, pollutants, forecast |
-| `half_vertical` | map and headline |
+| `half_vertical` | map and headline; on the X, also all five regions and the forecast |
 | `half_horizontal` | headline, all five regions, forecast |
 | `quadrant` | headline PSI and band |
 

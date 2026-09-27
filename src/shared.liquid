@@ -24,6 +24,15 @@
 {%- assign map_labels = "north|191,50;;south|191,157;;east|296,103;;west|87,103;;central|191,103" | split: ";;" -%}
 {%- comment -%} END GENERATED MAP {%- endcomment -%}
 
+{%- comment -%}
+  Title bar icon, in place of the default TRMNL mark: the island silhouette,
+  from the same coastline as the map. Inlined so it costs no request.
+  Regenerate with:
+    python3 tools/build_icon.py --variant solid --size 64 --out icon.png
+    base64 -i icon.png
+{%- endcomment -%}
+{%- assign title_icon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAQAAAAAYLlVAAAB70lEQVR42u2Z4dnEEAyAM4hFDGIQixjEIBYxiCPa4lrfp1ekP/DcPde7nrySiFQAiua40864Uc340TnUmhdu3YxmLyE828ymacV/IxCIzxG87ala9IVJrnfpjrTzjzogsn/yg4Fhpyk0gSNuC2ABLIAfAUJmYakArBP+byGG8w5R7DaAdgzF712PBpAoRm5XohAe+0AAmwnk/jO/EJ/gugPIS3HnrvydzL/Xm0LTBZ9hJ1yo+znc7MJ3WZmlLO5rALAVdbdgXDmuqXoN9Jr/X+vCYt9/Z0UEgZrVfgdIAoJRdKaHGyZgDwCiEHkYMc03AJkWJxQPxX8vU3tvGZqu4neNmHYAPgAAqpsXzJh/cMxmE8ghALIdgA0BUFVHhLMBWCcIcawm4QF0G4BAa8kt3Ygw7La9ZSbO/JM5QRkyo7qMHyTEMIUDSEzAZDaj+pz1s+3YHqHU4rJR+ErDmp/DzS2AmOnpLaAqRDK4P3Dc+c/C+YPEDMqLfTfb086UDUUNcFwnrLD4s9QUygRMoPqjG7JDC7JYJxz1o/Fbs93fCSDZ0W66UBepVt8THcjzFv61I4jZT0Z5vFJuzukNlHEwV/ScwyMYad/1eL4AFsACaAMgP6wmP66nLliQl2xeULQiL9u9oHD5gtLtC4rXVOX7D2hsa3q4nW1kAAAAAElFTkSuQmCC" -%}
+
 {%- comment -%} ---------- sources ---------- {%- endcomment -%}
 {%- assign psi_item = IDX_0.data.items[0] -%}
 {%- assign readings = psi_item.readings -%}

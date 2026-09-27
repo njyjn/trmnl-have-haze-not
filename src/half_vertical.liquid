@@ -1,4 +1,9 @@
-{%- comment -%} Left or right half of a side-by-side mashup: map on top, headline below. {%- endcomment -%}
+{%- comment -%}
+  Left or right half of a side-by-side mashup: map on top, headline below.
+  On the X the half is taller than it is wide (520x780, or 390x1040 rotated),
+  so the regions and the forecast join in there. The OG half has no room for
+  them, so they are hidden unless the framework's lg: breakpoint applies.
+{%- endcomment -%}
 
 <div class="layout aq-screen">
   {%- if has_psi == false -%}
@@ -6,7 +11,7 @@
       <span class="title title--small">No air quality data</span>
     </div>
   {%- else -%}
-    <div class="flex flex--col gap--small">
+    <div class="flex flex--col gap--small w--full">
       <div class="w--full">{{ map_svg }}</div>
       <div class="border--h-5"></div>
       <div class="item">
@@ -17,11 +22,68 @@
           <span class="description">{{ dom_name }} leading &middot; PM2.5 {{ home_pm25 }}</span>
         </div>
       </div>
+
+      <div class="hidden lg:block w--full">
+        <div class="border--h-5"></div>
+        <div class="lg:portrait:hidden">
+          <span class="label label--small">All regions</span>
+          <div class="flex flex--between gap--small">
+            {%- for layer in map_layers -%}
+              {%- assign rname = layer | split: '|' | first -%}
+              <div class="item item--shrink">
+                <div class="content">
+                  <span class="label label--small">{{ rname | slice: 0, 1 | upcase }}</span>
+                  <span class="value value--small value--tnums">{{ region_values[forloop.index0] }}</span>
+                </div>
+              </div>
+            {%- endfor -%}
+          </div>
+        </div>
+
+        {%- comment -%}
+          Rotated, the half is 1040px tall: room for the full per-region
+          table from the full view in place of the one-line row above.
+        {%- endcomment -%}
+        <div class="hidden lg:portrait:block">
+          <div class="grid grid--cols-4">
+            <span class="label label--small">Region</span>
+            <span class="label label--small">{{ scale_short }}</span>
+            <span class="label label--small">PM2.5</span>
+            <span class="label label--small">PM10</span>
+          </div>
+          {%- for layer in map_layers -%}
+            {%- assign rname = layer | split: '|' | first -%}
+            <div class="grid grid--cols-4">
+              <span class="title title--small">{{ rname | capitalize }}</span>
+              <span class="value value--xsmall value--tnums">{{ region_values[forloop.index0] }}</span>
+              <span class="value value--xsmall value--tnums">{{ readings.pm25_twenty_four_hourly[rname] }}</span>
+              <span class="value value--xsmall value--tnums">{{ readings.pm10_twenty_four_hourly[rname] }}</span>
+            </div>
+          {%- endfor -%}
+        </div>
+
+        <div class="border--h-5"></div>
+
+        {%- if has_forecast -%}
+          <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
+          <svg class="aq-spark" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
+            <polyline class="aq-spark__line" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
+          </svg>
+          <div class="flex flex--between">
+            <span class="label label--small label--gray-out 1bit:text--black">now {{ fc_now | round }}</span>
+            <span class="label label--small label--gray-out 1bit:text--black">peak {{ fc_max | round }}</span>
+            <span class="label label--small label--gray-out 1bit:text--black">{{ fc_times | last | date: '%-l%P' }} {{ fc_end | round }}</span>
+          </div>
+        {%- else -%}
+          <span class="label label--small label--gray-out 1bit:text--black">Forecast unavailable</span>
+        {%- endif -%}
+      </div>
     </div>
   {%- endif -%}
 </div>
 
 <div class="title_bar">
+  <img class="image" src="{{ title_icon }}" alt="">
   <span class="title">Have Haze Not</span>
   <span class="instance">{{ psi_item.timestamp | date: '%-l%P' }}</span>
 </div>

@@ -6,7 +6,9 @@
 
   Layout is framework classes throughout: a 12-column grid split 7/5 on the
   OG and 8/4 on the X (whose extra width goes to the map), and a single
-  column in portrait. The framework grid cannot reorder its cells, so the
+  column in portrait. The OG rotated is only 480px wide and has no height
+  to spare, so there the readings take two rows at a size down, the cities
+  wrap to three across, and the per-region table stays X-only. The framework grid cannot reorder its cells, so the
   readings, which sit above the map in portrait, are captured once and
   emitted twice: beside the map, hidden in portrait, and above the grid,
   shown only in portrait.
@@ -38,7 +40,7 @@
   <div class="item">
     <div class="content">
       <span class="label label--small">{{ scale_name }} &middot; {{ home_label }}</span>
-      <span class="value value--xxxlarge value--tnums">{{ home_value }}</span>
+      <span class="value value--xxxlarge portrait:value--xxlarge lg:portrait:value--xxxlarge value--tnums">{{ home_value }}</span>
       <span class="title title--small">{{ home_band_label }}</span>
       <span class="description description--base">{{ home_band_advice }}</span>
     </div>
@@ -50,19 +52,19 @@
     <div class="item item--shrink">
       <div class="content">
         <span class="label label--small">Dominant</span>
-        <span class="value value--small">{{ dom_name }}</span>
+        <span class="value value--small portrait:value--xsmall lg:portrait:value--small">{{ dom_name }}</span>
       </div>
     </div>
     <div class="item item--shrink">
       <div class="content">
         <span class="label label--small">PM2.5</span>
-        <span class="value value--small value--tnums">{{ home_pm25 }}</span>
+        <span class="value value--small portrait:value--xsmall lg:portrait:value--small value--tnums">{{ home_pm25 }}</span>
       </div>
     </div>
     <div class="item item--shrink">
       <div class="content">
         <span class="label label--small">PM10</span>
-        <span class="value value--small value--tnums">{{ home_pm10 }}</span>
+        <span class="value value--small portrait:value--xsmall lg:portrait:value--small value--tnums">{{ home_pm10 }}</span>
       </div>
     </div>
   </div>
@@ -78,8 +80,8 @@
   {%- else -%}
     {%- comment -%} Portrait only: the readings as a row above the map. {%- endcomment -%}
     <div class="hidden portrait:block w--full">
-      <div class="grid grid--cols-3">
-        <div>{{ headline_block }}</div>
+      <div class="grid grid--cols-2 lg:grid--cols-3">
+        <div class="col--span-2 lg:col--span-1">{{ headline_block }}</div>
         <div>{{ pollutant_block }}</div>
         <div>{{ fc_block }}</div>
       </div>
@@ -87,7 +89,7 @@
 
     <div class="grid grid--cols-12 w--full">
 
-      <div class="col--span-7 lg:col--span-8 lg:portrait:col--span-12 flex--col flex--stretch-x gap--small">
+      <div class="col--span-7 lg:col--span-8 portrait:col--span-12 lg:portrait:col--span-12 flex--col flex--stretch-x gap--small">
         {{ map_svg }}
 
         {%- comment -%}
@@ -143,7 +145,7 @@
 
         <div>
           <span class="label label--small">Regional &middot; {{ scale_city_note }}</span>
-          <div class="flex flex--between gap--small">
+          <div class="grid grid--cols-5 portrait:grid--cols-3 lg:portrait:grid--cols-5">
             {%- for city in om_cities -%}
               <div class="item item--shrink">
                 <div class="content">

@@ -39,7 +39,13 @@ def spans(cls):
 
 
 def cells(text):
-    """Class lists of every grid cell (anything with a col--span)."""
+    """Class lists of the main grid's cells (anything with a col--span).
+
+    In full.liquid the portrait-only readings row above the grid has cells
+    of its own, so start from the main grid."""
+    main = text.find('class="grid grid--cols-12')
+    if main >= 0:
+        text = text[main:]
     return [c for c in re.findall(r'class="([^"]*)"', text) if "col--span-" in c]
 
 
@@ -159,8 +165,11 @@ class TestPortrait(unittest.TestCase):
         self.full = (SRC / "full.liquid").read_text()
 
     def test_map_takes_the_full_width(self):
+        """In any portrait, not just the X's: the OG rotated is a real
+        orientation too, and a lg:-only rule left its map at 7/12."""
         map_cell = spans(cells(self.full)[0])
-        self.assertEqual(map_cell.get("lg:portrait:"), 12)
+        self.assertEqual(map_cell.get("portrait:"), 12, "OG portrait keeps the landscape span")
+        self.assertEqual(map_cell.get("lg:portrait:"), 12, "X portrait keeps the lg: span")
 
     def test_side_column_steps_aside(self):
         self.assertIn("portrait:hidden", cells(self.full)[1])

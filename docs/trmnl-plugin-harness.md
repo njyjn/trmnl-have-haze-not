@@ -155,7 +155,7 @@ are the files to copy.
 - Review expects an `author_bio` custom field (`field_type: author_bio`, with
   `github_url`, `learn_more_url` and a `category` of up to two comma-separated
   values from TRMNL's fixed list, e.g. `category: environment,life`), and the
-  layout tested at OG landscape, X landscape and X portrait.
+  layout tested at OG landscape, OG portrait, X landscape and X portrait.
 - The usual blocker is **demo data**: the recipe master's screen is visible to
   anyone installing, so a plugin showing personal data must ship fake values.
   Plugins reading public APIs with no key have nothing to hide and can skip it.
@@ -203,8 +203,10 @@ into `fixtures/` is right for public data and wrong for anything personal.
 
 Passing tests are not evidence on their own.
 
-- **Render and look at the PNGs** for every layout, at OG landscape, X
-  landscape and X portrait. Several bugs above are invisible in a passing test
+- **Render and look at the PNGs** for every layout, at OG landscape, OG
+  portrait (480x800), X landscape and X portrait. OG portrait is the easy one
+  to forget: `lg:portrait:` classes do not reach it, and at 480px wide a
+  three-across row that fits the X clips. Several bugs above are invisible in a passing test
   suite and obvious in a screenshot.
 - **Prove each test bites.** Re-introduce the bug it covers, confirm it fails,
   restore, confirm it passes. A test that has never failed has proven nothing.

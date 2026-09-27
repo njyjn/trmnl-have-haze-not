@@ -1,8 +1,8 @@
 {%- comment -%}
   Left or right half of a side-by-side mashup: map on top, headline below.
-  On the X the half is taller than it is wide (520x780, or 390x1040 rotated),
-  so the regions and the forecast join in there. The OG half has no room for
-  them, so they are hidden unless the framework's lg: breakpoint applies.
+  Wherever the half is taller than it is wide -- the X (520x780, 390x1040
+  rotated) and the OG rotated (230x780) -- the regions and the forecast join
+  in. The OG half in landscape (390x440) has no room for them.
 {%- endcomment -%}
 
 <div class="layout layout--col">
@@ -23,11 +23,12 @@
         </div>
       </div>
 
-      <div class="hidden lg:block w--full">
+      <div class="hidden lg:block portrait:block w--full">
         <div class="border--h-5"></div>
         <div class="lg:portrait:hidden">
           <span class="label label--small">All regions</span>
-          <div class="flex flex--between gap--small">
+          {%- comment -%} Five across does not fit the OG rotated (230px wide); three does. {%- endcomment -%}
+          <div class="grid grid--cols-5 portrait:grid--cols-3">
             {%- for layer in map_layers -%}
               {%- assign rname = layer | split: '|' | first -%}
               <div class="item item--shrink">
@@ -41,8 +42,8 @@
         </div>
 
         {%- comment -%}
-          Rotated, the half is 1040px tall: room for the full per-region
-          table from the full view in place of the one-line row above.
+          The X rotated is 1040px tall: room for the full per-region table
+          from the full view in place of the row above.
         {%- endcomment -%}
         <div class="hidden lg:portrait:block">
           <div class="grid grid--cols-4">

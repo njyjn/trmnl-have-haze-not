@@ -23,7 +23,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # (scale, region, value, band)
 HEADLINE = re.compile(
     r'label--small">([^<&]*) &middot; ([^<]*)</span>\s*'
-    r'<span class="value value--xxxlarge value--tnums">([^<]*)</span>\s*'
+    r'<span class="value value--xxxlarge[^"]*">([^<]*)</span>\s*'
     r'<span class="title title--small">([^<]*)</span>'
 )
 # Region rows in the detail table: name, scale value, PM2.5, PM10

@@ -14,6 +14,9 @@
   shown only in portrait.
 {%- endcomment -%}
 
+<div class="layout layout--col">
+
+{%- comment -%} Captures render nothing; they sit inside .layout so it is the first element. {%- endcomment -%}
 {%- capture fc_block -%}
   {%- if has_forecast -%}
     <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
@@ -71,7 +74,6 @@
   <span class="label label--small label--gray-out 1bit:text--black">24-hour average, &micro;g/m&sup3;</span>
 {%- endcapture -%}
 
-<div class="layout layout--col">
   {%- if has_psi == false -%}
     <div class="flex flex--col flex--center h--full">
       <span class="title title--large">No air quality data</span>

@@ -111,12 +111,12 @@
             <circle cx="{{ cx }}" cy="8" r="{{ band_radii[forloop.index0] }}"/>
             <text x="{{ cx }}" y="24" text-anchor="middle" font-size="10" font-weight="500">{{ lbl }}</text>
             {%- if forloop.first -%}
-              <text class="aq-legend__scale" x="{{ cx }}" y="37" text-anchor="middle" font-size="11" font-weight="700">0</text>
+              {%- assign edge = 0 -%}
             {%- else -%}
               {%- assign prev = forloop.index0 | minus: 1 -%}
               {%- assign edge = band_edges[prev] | plus: 1 -%}
-              <text class="aq-legend__scale" x="{{ cx }}" y="37" text-anchor="middle" font-size="11" font-weight="700">{{ edge }}{% if forloop.last %}+{% endif %}</text>
             {%- endif -%}
+            <text class="aq-legend__scale" x="{{ cx }}" y="37" text-anchor="middle" font-size="11" font-weight="700">{{ edge }}{% if forloop.last %}+{% endif %}</text>
           {%- endfor -%}
         </svg>
 

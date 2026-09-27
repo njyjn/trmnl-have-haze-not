@@ -336,7 +336,7 @@ class TestAqicnSource(unittest.TestCase):
 
     def map_values(self, html):
         names = re.findall(r'aq-map__name"[^>]*>([A-Z]+)</text>', html)
-        nums = re.findall(r'aq-map__psi"[^>]*text-anchor="middle"[^>]*>([^<]*)</text>', html)
+        nums = re.findall(r'aq-map__psi"[^>]*>([^<]*)</text>', html)
         return dict(zip(names, nums))
 
     def test_token_makes_every_region_match_aqicn_exactly(self):

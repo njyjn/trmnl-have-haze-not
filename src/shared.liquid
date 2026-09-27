@@ -417,13 +417,17 @@
           give one element a fill and a stroke from two different colours
           through currentColor. text--white is the background colour in
           both modes: dark mode swaps the framework's black and white.
+          Type attributes sit on the group so each size is written once;
+          trmnlp lint counts how often type sizes appear in the markup.
         {%- endcomment -%}
-        <g class="text--white" stroke="currentColor" stroke-width="3">
-          <text class="aq-map__halo" x="{{ lxy[0] }}" y="{{ ly_name }}" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="0.04em">{{ lname | upcase }}</text>
-          <text class="aq-map__halo" x="{{ lxy[0] }}" y="{{ ly_psi }}" text-anchor="middle" font-size="17" font-weight="700">{{ lval }}</text>
+        <g text-anchor="middle" font-size="11" font-weight="600" letter-spacing="0.04em">
+          <text class="aq-map__halo text--white" x="{{ lxy[0] }}" y="{{ ly_name }}" stroke="currentColor" stroke-width="3">{{ lname | upcase }}</text>
+          <text class="aq-map__name" x="{{ lxy[0] }}" y="{{ ly_name }}">{{ lname | upcase }}</text>
         </g>
-        <text class="aq-map__name" x="{{ lxy[0] }}" y="{{ ly_name }}" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="0.04em">{{ lname | upcase }}</text>
-        <text class="aq-map__psi" x="{{ lxy[0] }}" y="{{ ly_psi }}" text-anchor="middle" font-size="17" font-weight="700">{{ lval }}</text>
+        <g text-anchor="middle" font-size="17" font-weight="700">
+          <text class="aq-map__halo text--white" x="{{ lxy[0] }}" y="{{ ly_psi }}" stroke="currentColor" stroke-width="3">{{ lval }}</text>
+          <text class="aq-map__psi" x="{{ lxy[0] }}" y="{{ ly_psi }}">{{ lval }}</text>
+        </g>
       {%- endfor -%}
     </svg>
   {%- endif -%}

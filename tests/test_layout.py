@@ -108,9 +108,26 @@ class TestDarkMode(unittest.TestCase):
                                 "%s.liquid hard-codes a colour dark mode cannot swap" % name)
 
     def test_halos_use_the_background_colour(self):
-        self.assertIn('class="text--white" stroke="currentColor"', SHARED)
+        halos = re.findall(r'<text class="aq-map__halo([^"]*)"[^>]*>', SHARED)
+        self.assertEqual(len(halos), 2, "expected a halo for the name and the value")
+        for h in halos:
+            self.assertIn("text--white", h)
         self.assertNotIn("dark:text--black", SHARED,
                          "dark mode already swaps text--white to black; the override undoes it")
+
+
+class TestLintInlineStyleBudget(unittest.TestCase):
+    """Mirrors trmnlp lint's LimitedInlineStyles: it counts raw occurrences
+    of these property names anywhere in the markup, comments included, and
+    fails above six. SVG presentation attributes count too."""
+
+    PROPERTIES = ("justify-content", "padding", "margin", "background-color",
+                  "border-radius", "text-align", "object-fit", "font-size")
+
+    def test_within_budget(self):
+        markup = "".join((SRC / ("%s.liquid" % n)).read_text() for n in LAYOUTS + ("shared",))
+        count = sum(markup.count(p) for p in self.PROPERTIES)
+        self.assertLessEqual(count, 6, "trmnlp lint allows 6; markup has %d" % count)
 
 
 class TestLayoutIsNotNested(unittest.TestCase):

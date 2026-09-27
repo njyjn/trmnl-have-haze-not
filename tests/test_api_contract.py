@@ -180,6 +180,20 @@ class TestPublishingMetadata(unittest.TestCase):
         self.assertIn("field_type: author_bio", SETTINGS,
                       "recipe review expects an author_bio field")
 
+    def test_author_bio_has_valid_category(self):
+        allowed = {
+            "analytics", "art", "calendar", "comics", "crm", "custom",
+            "discovery", "ecommerce", "education", "email", "entertainment",
+            "environment", "finance", "games", "humor", "images", "kpi",
+            "life", "marketing", "nature", "news", "personal", "productivity",
+            "programming", "sales", "sports", "travel",
+        }
+        m = re.search(r"(?m)^  category: (.+)$", SETTINGS)
+        self.assertIsNotNone(m, "recipe review expects a category on author_bio")
+        cats = m.group(1).split(",")
+        self.assertLessEqual(len(cats), 2, "author_bio takes at most 2 categories")
+        self.assertLessEqual(set(cats), allowed)
+
     def test_field_descriptions_are_single_lines(self):
         """No block scalars in custom_fields.
 

@@ -153,7 +153,8 @@ are the files to copy.
   **Unlisted** skips moderation and yields a shareable link immediately, which
   is the cheaper way to test the install flow first.
 - Review expects an `author_bio` custom field (`field_type: author_bio`, with
-  `github_url` and `learn_more_url`), categories chosen in the web UI, and the
+  `github_url`, `learn_more_url` and a `category` of up to two comma-separated
+  values from TRMNL's fixed list, e.g. `category: environment,life`), and the
   layout tested at OG landscape, X landscape and X portrait.
 - The usual blocker is **demo data**: the recipe master's screen is visible to
   anyone installing, so a plugin showing personal data must ship fake values.

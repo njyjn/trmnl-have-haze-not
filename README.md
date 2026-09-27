@@ -323,7 +323,6 @@ to render them all to `docs/` and compare.
 Before submitting:
 
 - [ ] `make test && make lint`
-- [ ] pick categories in the web UI (they are not part of `settings.yml`)
 - [ ] set `TRMNL_API_KEY` as a repo secret if you want CI to deploy on push
 
 Demo data, the usual blocker, does not apply: the plugin polls public APIs

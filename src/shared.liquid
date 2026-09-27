@@ -250,6 +250,12 @@
 {%- comment -%} ---------- 24h PM2.5 forecast sparkline ---------- {%- endcomment -%}
 {%- assign spark_w = 300 -%}
 {%- assign spark_h = 52 -%}
+{%- comment -%}
+  Inset the plot so the peak and trough are not drawn on the viewBox edge,
+  where the SVG clips half the stroke away.
+{%- endcomment -%}
+{%- assign spark_pad = 3 -%}
+{%- assign spark_plot_h = spark_h | minus: spark_pad | minus: spark_pad -%}
 {%- if has_forecast -%}
   {%- assign fc = om_sg.hourly.pm2_5 -%}
   {%- assign fc_times = om_sg.hourly.time -%}
@@ -266,7 +272,7 @@
   {%- assign spark_points = '' -%}
   {%- for v in fc -%}
     {%- assign sx = forloop.index0 | times: spark_w | times: 1.0 | divided_by: fc_last_i | round: 1 -%}
-    {%- assign sy = v | minus: fc_min | times: spark_h | times: 1.0 | divided_by: fc_span -%}
+    {%- assign sy = v | minus: fc_min | times: spark_plot_h | times: 1.0 | divided_by: fc_span | plus: spark_pad -%}
     {%- assign sy = spark_h | minus: sy | round: 1 -%}
     {%- assign spark_points = spark_points | append: sx | append: ',' | append: sy | append: ' ' -%}
   {%- endfor -%}

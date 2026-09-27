@@ -133,7 +133,7 @@
           <svg class="aq-spark" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
             {%- comment -%} NEA calls 1h PM2.5 above 55 elevated; show it when it is in range. {%- endcomment -%}
             {%- if fc_min < 55 and fc_max > 55 -%}
-              {%- assign rule_y = 55 | minus: fc_min | times: spark_h | times: 1.0 | divided_by: fc_span -%}
+              {%- assign rule_y = 55 | minus: fc_min | times: spark_plot_h | times: 1.0 | divided_by: fc_span | plus: spark_pad -%}
               {%- assign rule_y = spark_h | minus: rule_y | round: 1 -%}
               <line class="aq-spark__rule" vector-effect="non-scaling-stroke" x1="0" y1="{{ rule_y }}" x2="{{ spark_w }}" y2="{{ rule_y }}"/>
             {%- endif -%}

@@ -90,7 +90,7 @@ class TestNoStyleBlock(unittest.TestCase):
         for name in ("full", "shared"):
             text = (SRC / ("%s.liquid" % name)).read_text()
             for tag in re.findall(r"<svg\b[^>]*>", text):
-                if "aq-spark" in tag:
+                if 'data-aq="spark"' in tag:
                     continue  # no text
                 self.assertIn('font-family="Inter', tag, "%s.liquid: svg without a font" % name)
 
@@ -108,7 +108,7 @@ class TestDarkMode(unittest.TestCase):
                                 "%s.liquid hard-codes a colour dark mode cannot swap" % name)
 
     def test_halos_use_the_background_colour(self):
-        halos = re.findall(r'<text class="aq-map__halo([^"]*)"[^>]*>', SHARED)
+        halos = re.findall(r'<text class="([^"]*)" data-aq="halo"', SHARED)
         self.assertEqual(len(halos), 2, "expected a halo for the name and the value")
         for h in halos:
             self.assertIn("text--white", h)
@@ -224,7 +224,7 @@ class TestOneBitLegibility(unittest.TestCase):
     def test_every_grey_label_is_forced_black_on_1bit(self):
         for name in LAYOUTS:
             text = (SRC / ("%s.liquid" % name)).read_text()
-            for m in re.finditer(r'class="([^"]*label--gray-out[^"]*)"', text):
+            for m in re.finditer(r'class="([^"]*label--gray[^"]*)"', text):
                 self.assertIn("1bit:text--black", m.group(1),
                               "%s.liquid has a grey label that vanishes at 1-bit" % name)
 

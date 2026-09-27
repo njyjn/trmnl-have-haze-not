@@ -369,7 +369,7 @@
 {%- endcomment -%}
 {%- capture map_svg -%}
   {%- if has_psi -%}
-    <svg class="aq-map block value--tnums" viewBox="0 0 {{ map_w }} {{ map_h }}" width="100%" font-family="Inter Variable, Inter, sans-serif" fill="currentColor">
+    <svg class="block value--tnums" data-aq="map" viewBox="0 0 {{ map_w }} {{ map_h }}" width="100%" font-family="Inter Variable, Inter, sans-serif" fill="currentColor">
       {%- for layer in map_layers -%}
         {%- assign parts = layer | split: '|' -%}
         {%- assign rname = parts[0] -%}
@@ -421,15 +421,77 @@
           trmnlp lint counts how often type sizes appear in the markup.
         {%- endcomment -%}
         <g text-anchor="middle" font-size="11" font-weight="600" letter-spacing="0.04em">
-          <text class="aq-map__halo text--white" x="{{ lxy[0] }}" y="{{ ly_name }}" stroke="currentColor" stroke-width="3">{{ lname | upcase }}</text>
-          <text class="aq-map__name" x="{{ lxy[0] }}" y="{{ ly_name }}">{{ lname | upcase }}</text>
+          <text class="text--white" data-aq="halo" x="{{ lxy[0] }}" y="{{ ly_name }}" stroke="currentColor" stroke-width="3">{{ lname | upcase }}</text>
+          <text data-aq="name" x="{{ lxy[0] }}" y="{{ ly_name }}">{{ lname | upcase }}</text>
         </g>
         <g text-anchor="middle" font-size="17" font-weight="700">
-          <text class="aq-map__halo text--white" x="{{ lxy[0] }}" y="{{ ly_psi }}" stroke="currentColor" stroke-width="3">{{ lval }}</text>
-          <text class="aq-map__psi" x="{{ lxy[0] }}" y="{{ ly_psi }}">{{ lval }}</text>
+          <text class="text--white" data-aq="halo" x="{{ lxy[0] }}" y="{{ ly_psi }}" stroke="currentColor" stroke-width="3">{{ lval }}</text>
+          <text data-aq="value" x="{{ lxy[0] }}" y="{{ ly_psi }}">{{ lval }}</text>
         </g>
       {%- endfor -%}
     </svg>
   {%- endif -%}
 {%- endcapture -%}
 
+{%- comment -%}
+  Reading blocks, built once here so a layout can place the same markup in
+  more than one spot (full.liquid shows the readings beside the map, or
+  above it in portrait) without repeating it. Captures render nothing until
+  a layout outputs them.
+{%- endcomment -%}
+{%- capture fc_block -%}
+  {%- if has_forecast -%}
+    <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
+    <svg class="block" data-aq="spark" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
+      {%- comment -%} NEA calls 1h PM2.5 above 55 elevated; show it when it is in range. {%- endcomment -%}
+      {%- if fc_min < 55 and fc_max > 55 -%}
+        {%- assign rule_y = 55 | minus: fc_min | times: spark_plot_h | times: 1.0 | divided_by: fc_span | plus: spark_pad -%}
+        {%- assign rule_y = spark_h | minus: rule_y | round: 1 -%}
+        <line data-aq="spark-rule" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" x1="0" y1="{{ rule_y }}" x2="{{ spark_w }}" y2="{{ rule_y }}"/>
+      {%- endif -%}
+      <polyline data-aq="spark-line" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
+    </svg>
+    <div class="flex flex--between">
+      <span class="label label--small label--gray 1bit:text--black">now {{ fc_now | round }}</span>
+      <span class="label label--small label--gray 1bit:text--black">peak {{ fc_max | round }}</span>
+      <span class="label label--small label--gray 1bit:text--black">{{ fc_times | last | date: '%-l%P' }} {{ fc_end | round }}</span>
+    </div>
+  {%- else -%}
+    <span class="label label--small label--gray 1bit:text--black">Forecast unavailable</span>
+  {%- endif -%}
+{%- endcapture -%}
+
+{%- capture headline_block -%}
+  <div class="item">
+    <div class="content">
+      <span class="label label--small">{{ scale_name }} &middot; {{ home_label }}</span>
+      <span class="value value--xxxlarge portrait:value--xxlarge lg:portrait:value--xxxlarge value--tnums">{{ home_value }}</span>
+      <span class="title title--small">{{ home_band_label }}</span>
+      <span class="description description--base">{{ home_band_advice }}</span>
+    </div>
+  </div>
+{%- endcapture -%}
+
+{%- capture pollutant_block -%}
+  <div class="grid grid--cols-3 gap--small">
+    <div class="item item--shrink">
+      <div class="content">
+        <span class="label label--small">Dominant</span>
+        <span class="value value--small portrait:value--xsmall lg:portrait:value--small">{{ dom_name }}</span>
+      </div>
+    </div>
+    <div class="item item--shrink">
+      <div class="content">
+        <span class="label label--small">PM2.5</span>
+        <span class="value value--small portrait:value--xsmall lg:portrait:value--small value--tnums">{{ home_pm25 }}</span>
+      </div>
+    </div>
+    <div class="item item--shrink">
+      <div class="content">
+        <span class="label label--small">PM10</span>
+        <span class="value value--small portrait:value--xsmall lg:portrait:value--small value--tnums">{{ home_pm10 }}</span>
+      </div>
+    </div>
+  </div>
+  <span class="label label--small label--gray 1bit:text--black">24-hour average, &micro;g/m&sup3;</span>
+{%- endcapture -%}

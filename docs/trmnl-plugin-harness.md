@@ -83,7 +83,7 @@ are the files to copy.
   (`.title`, `.value`, `.label`). Bare SVG `<text>` inherits nothing that
   resolves and falls back to **serif** — the only serif on the screen. Set it
   from `var(--value-font-family)`.
-- Grey text (`label--gray-out`) dithers away on 1-bit panels. Add
+- Grey text (`label--gray`; `label--gray-out` is its deprecated old name) dithers away on 1-bit panels. Add
   `1bit:text--black`.
 - `preserveAspectRatio="none"` scales stroke width along with the box. Add
   `vector-effect="non-scaling-stroke"` to anything stretched, or lines render

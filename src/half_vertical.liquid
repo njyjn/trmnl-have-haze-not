@@ -65,19 +65,7 @@
 
         <div class="border--h-5"></div>
 
-        {%- if has_forecast -%}
-          <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
-          <svg class="aq-spark block" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
-            <polyline class="aq-spark__line" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
-          </svg>
-          <div class="flex flex--between">
-            <span class="label label--small label--gray-out 1bit:text--black">now {{ fc_now | round }}</span>
-            <span class="label label--small label--gray-out 1bit:text--black">peak {{ fc_max | round }}</span>
-            <span class="label label--small label--gray-out 1bit:text--black">{{ fc_times | last | date: '%-l%P' }} {{ fc_end | round }}</span>
-          </div>
-        {%- else -%}
-          <span class="label label--small label--gray-out 1bit:text--black">Forecast unavailable</span>
-        {%- endif -%}
+        {{ fc_block }}
       </div>
     </div>
   {%- endif -%}

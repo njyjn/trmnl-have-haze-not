@@ -158,7 +158,7 @@ class TestRenderedDotSizes(unittest.TestCase):
         # Take the ramp from the legend the page actually drew, not from the
         # first band_radii in the source: each scale declares its own, so
         # matching on source order picks whichever happens to come first.
-        svg = re.search(r'<svg class="aq-legend[^"]*".*?</svg>', cls.html, re.S).group(0)
+        svg = re.search(r'<svg [^>]*data-aq="legend".*?</svg>', cls.html, re.S).group(0)
         cls.allowed = {float(r) for r in re.findall(r'<circle[^>]*r="([\d.]+)"', svg)}
 
     def test_all_circle_radii_come_from_band_radii(self):
@@ -171,7 +171,7 @@ class TestRenderedDotSizes(unittest.TestCase):
 
     def test_legend_shows_every_band(self):
         """The legend is what makes dot size decodable, so every band must draw."""
-        legend = re.search(r'<svg class="aq-legend[^"]*".*?</svg>', self.html, re.S)
+        legend = re.search(r'<svg [^>]*data-aq="legend".*?</svg>', self.html, re.S)
         self.assertIsNotNone(legend)
         radii = {float(r) for r in re.findall(r'<circle[^>]*\br="([\d.]+)"', legend.group(0))}
         self.assertEqual(radii, self.allowed)
@@ -271,7 +271,7 @@ class TestScaleSwitching(unittest.TestCase):
         cls.pages = {k: render("Central", scale=k) for k in cls.CASES}
 
     def legend(self, html):
-        svg = re.search(r'<svg class="aq-legend[^"]*".*?</svg>', html, re.S)
+        svg = re.search(r'<svg [^>]*data-aq="legend".*?</svg>', html, re.S)
         self.assertIsNotNone(svg)
         return svg.group(0)
 
@@ -335,8 +335,8 @@ class TestAqicnSource(unittest.TestCase):
         return out
 
     def map_values(self, html):
-        names = re.findall(r'aq-map__name"[^>]*>([A-Z]+)</text>', html)
-        nums = re.findall(r'aq-map__psi"[^>]*>([^<]*)</text>', html)
+        names = re.findall(r'data-aq="name"[^>]*>([A-Z]+)</text>', html)
+        nums = re.findall(r'data-aq="value"[^>]*>([^<]*)</text>', html)
         return dict(zip(names, nums))
 
     def test_token_makes_every_region_match_aqicn_exactly(self):

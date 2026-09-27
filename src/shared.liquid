@@ -369,7 +369,7 @@
 {%- endcomment -%}
 {%- capture map_svg -%}
   {%- if has_psi -%}
-    <svg class="aq-map" viewBox="0 0 {{ map_w }} {{ map_h }}" width="100%">
+    <svg class="aq-map block value--tnums" viewBox="0 0 {{ map_w }} {{ map_h }}" width="100%" font-family="Inter Variable, Inter, sans-serif">
       {%- for layer in map_layers -%}
         {%- assign parts = layer | split: '|' -%}
         {%- assign rname = parts[0] -%}
@@ -411,31 +411,10 @@
         {%- endif -%}
         {%- assign ly_name = ly | minus: 3 -%}
         {%- assign ly_psi = ly | plus: 15 -%}
-        <text class="aq-map__halo" x="{{ lxy[0] }}" y="{{ ly_name }}" text-anchor="middle">{{ lname | upcase }}</text>
-        <text class="aq-map__halo aq-map__psi" x="{{ lxy[0] }}" y="{{ ly_psi }}" text-anchor="middle">{{ lval }}</text>
+        <text class="aq-map__halo" x="{{ lxy[0] }}" y="{{ ly_name }}" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="0.04em" stroke="#fff" stroke-width="3" paint-order="stroke">{{ lname | upcase }}</text>
+        <text class="aq-map__halo aq-map__psi" x="{{ lxy[0] }}" y="{{ ly_psi }}" text-anchor="middle" font-size="17" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">{{ lval }}</text>
       {%- endfor -%}
     </svg>
   {%- endif -%}
 {%- endcapture -%}
 
-<style>
-  /* Layout is framework classes only. This block styles the insides of the
-     map, legend and forecast SVGs, which framework classes cannot reach. */
-  /* Without display:block + height:auto the SVG has no intrinsic height in a
-     flex column and the whole layout collapses. */
-  .aq-map, .aq-legend, .aq-spark { display: block; width: 100%; height: auto; }
-  .aq-map text, .aq-legend text {
-    font-family: var(--value-font-family), "Inter Variable", Inter, sans-serif;
-    font-variant-numeric: tabular-nums;
-  }
-  .aq-map text { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
-  .aq-map .aq-map__psi { font-size: 17px; font-weight: 700; letter-spacing: 0; }
-  .aq-map .aq-map__halo { stroke: #fff; stroke-width: 3px; paint-order: stroke; }
-  .aq-spark .aq-spark__line { fill: none; stroke: #000; stroke-width: 2px; }
-  .aq-spark .aq-spark__rule { stroke: #000; stroke-width: 1px; stroke-dasharray: 3 3; }
-  /* The forecast line grows into whatever height its column has spare, but
-     bounded: stretched to 400px it turns a 13ug/m3 drift into a cliff. */
-  .aq-spark { flex: 1 1 auto; max-height: 200px; }
-  .aq-legend text { font-size: 10px; font-weight: 500; }
-  .aq-legend .aq-legend__scale { font-size: 11px; font-weight: 700; }
-</style>

@@ -18,16 +18,6 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "src"
 LAYOUTS = ("full", "half_horizontal", "half_vertical", "quadrant")
 SHARED = (SRC / "shared.liquid").read_text()
-STYLE = re.search(r"<style>(.*?)</style>", SHARED, re.S).group(1)
-
-
-def rules(prefix):
-    """Every CSS declaration block whose selector mentions `prefix`."""
-    out = []
-    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", STYLE):
-        if prefix in sel:
-            out.append((sel.strip(), body))
-    return out
 
 
 def spans(cls):
@@ -84,18 +74,25 @@ class TestColumnsAreProportional(unittest.TestCase):
                                 "%s.liquid uses both-axis flex--stretch" % name)
 
 
-class TestStyleIsSvgOnly(unittest.TestCase):
-    """Layout is framework classes; the <style> block is only for the insides
-    of the SVGs, which framework classes cannot reach."""
+class TestNoStyleBlock(unittest.TestCase):
+    """Layout is framework classes, and the SVGs carry their own styling as
+    presentation attributes, so no view needs a <style> block. Review's
+    automated check flags one."""
 
-    def test_every_rule_targets_an_svg(self):
-        for sel, _ in re.findall(r"([^{}]+)\{([^{}]*)\}", re.sub(r"/\*.*?\*/", "", STYLE, flags=re.S)):
-            for part in sel.split(","):
-                self.assertRegex(part.strip(), r"^\.aq-(map|legend|spark)\b",
-                                 "%r is layout CSS; use framework classes" % part.strip())
+    def test_no_style_block_anywhere(self):
+        for name in LAYOUTS + ("shared",):
+            text = (SRC / ("%s.liquid" % name)).read_text()
+            self.assertNotIn("<style", text, "%s.liquid has a <style> block" % name)
 
-    def test_no_media_queries(self):
-        self.assertNotIn("@media", STYLE)
+    def test_svgs_name_their_font(self):
+        """Presentation attributes cannot read var(--value-font-family), so
+        the font is spelled out on each SVG that draws text."""
+        for name in ("full", "shared"):
+            text = (SRC / ("%s.liquid" % name)).read_text()
+            for tag in re.findall(r"<svg\b[^>]*>", text):
+                if "aq-spark" in tag:
+                    continue  # no text
+                self.assertIn('font-family="Inter', tag, "%s.liquid: svg without a font" % name)
 
 
 class TestLayoutIsNotNested(unittest.TestCase):

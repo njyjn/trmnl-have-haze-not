@@ -252,9 +252,10 @@ class TestSvgTypography(unittest.TestCase):
     """Bare <text> inherits no framework font; the default fallback is serif."""
 
     def test_map_text_declares_a_font(self):
-        block = re.search(r"\.aq-map text, \.aq-legend text \{([^}]*)\}", SHARED)
-        self.assertIsNotNone(block, "map/legend text must set its own font-family")
-        self.assertIn("font-family", block.group(1))
+        tag = re.search(r'<svg class="aq-map[^>]*>', SHARED)
+        self.assertIsNotNone(tag, "map svg not found")
+        self.assertIn('font-family="Inter', tag.group(0),
+                      "map text must set its own font-family")
 
 
 if __name__ == "__main__":

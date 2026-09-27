@@ -386,7 +386,7 @@
 {%- endcomment -%}
 {%- capture map_svg -%}
   {%- if has_psi -%}
-    <svg class="block value--tnums" data-aq="map" viewBox="0 0 {{ map_w }} {{ map_h }}" width="100%" font-family="Inter Variable, Inter, sans-serif" fill="currentColor">
+    <svg class="block value--tnums" viewBox="0 0 {{ map_w }} {{ map_h }}" width="100%" font-family="Inter Variable, Inter, sans-serif" fill="currentColor">
       {%- for layer in map_layers -%}
         {%- assign parts = layer | split: '|' -%}
         {%- assign rname = parts[0] -%}
@@ -440,12 +440,12 @@
           trmnlp lint counts how often type sizes appear in the markup.
         {%- endcomment -%}
         <g text-anchor="middle" font-size="11" font-weight="600" letter-spacing="0.04em">
-          <text class="text--white" data-aq="halo" x="{{ lxy[0] }}" y="{{ ly_name }}" stroke="currentColor" stroke-width="3">{{ lname | upcase }}</text>
-          <text data-aq="name" x="{{ lxy[0] }}" y="{{ ly_name }}">{{ lname | upcase }}</text>
+          <text class="text--white" x="{{ lxy[0] }}" y="{{ ly_name }}" stroke="currentColor" stroke-width="3">{{ lname | upcase }}</text>
+          <text x="{{ lxy[0] }}" y="{{ ly_name }}">{{ lname | upcase }}</text>
         </g>
         <g text-anchor="middle" font-size="17" font-weight="700">
-          <text class="text--white" data-aq="halo" x="{{ lxy[0] }}" y="{{ ly_psi }}" stroke="currentColor" stroke-width="3">{{ lval }}</text>
-          <text data-aq="value" x="{{ lxy[0] }}" y="{{ ly_psi }}">{{ lval }}</text>
+          <text class="text--white" x="{{ lxy[0] }}" y="{{ ly_psi }}" stroke="currentColor" stroke-width="3">{{ lval }}</text>
+          <text x="{{ lxy[0] }}" y="{{ ly_psi }}">{{ lval }}</text>
         </g>
       {%- endfor -%}
     </svg>
@@ -461,14 +461,14 @@
 {%- capture fc_block -%}
   {%- if has_forecast -%}
     <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
-    <svg class="block" data-aq="spark" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
+    <svg class="block" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
       {%- comment -%} NEA calls 1h PM2.5 above 55 elevated; show it when it is in range. {%- endcomment -%}
       {%- if fc_min < 55 and fc_max > 55 -%}
         {%- assign rule_y = 55 | minus: fc_min | times: spark_plot_h | times: 1.0 | divided_by: fc_span | plus: spark_pad -%}
         {%- assign rule_y = spark_h | minus: rule_y | round: 1 -%}
-        <line data-aq="spark-rule" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" x1="0" y1="{{ rule_y }}" x2="{{ spark_w }}" y2="{{ rule_y }}"/>
+        <line stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" x1="0" y1="{{ rule_y }}" x2="{{ spark_w }}" y2="{{ rule_y }}"/>
       {%- endif -%}
-      <polyline data-aq="spark-line" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
+      <polyline fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
     </svg>
     <div class="flex flex--between">
       <span class="label label--small label--gray 1bit:text--black">now {{ fc_now | round }}</span>

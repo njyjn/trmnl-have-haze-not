@@ -38,6 +38,18 @@ POLLUTANT = re.compile(
 )
 
 
+# The legend is the 430x40 SVG; the map is the one that draws the coastline.
+LEGEND = r'<svg [^>]*viewBox="0 0 430 40".*?</svg>'
+
+
+def map_labels(html):
+    """{REGION: value} as printed on the map. Each label is a halo copy
+    (class text--white) then the text itself, which carries only x and y."""
+    svg = next(s for s in re.findall(r"<svg\b.*?</svg>", html, re.S) if "<path " in s)
+    texts = re.findall(r'<text x="[^"]*" y="[^"]*">([^<]*)</text>', svg)
+    return dict(zip(texts[0::2], texts[1::2]))
+
+
 def docker_available():
     try:
         subprocess.run(["docker", "info"], capture_output=True, timeout=30, check=True)
@@ -163,7 +175,7 @@ class TestRenderedDotSizes(unittest.TestCase):
         # Take the ramp from the legend the page actually drew, not from the
         # first band_radii in the source: each scale declares its own, so
         # matching on source order picks whichever happens to come first.
-        svg = re.search(r'<svg [^>]*data-aq="legend".*?</svg>', cls.html, re.S).group(0)
+        svg = re.search(LEGEND, cls.html, re.S).group(0)
         cls.allowed = {float(r) for r in re.findall(r'<circle[^>]*r="([\d.]+)"', svg)}
 
     def test_all_circle_radii_come_from_band_radii(self):
@@ -176,7 +188,7 @@ class TestRenderedDotSizes(unittest.TestCase):
 
     def test_legend_shows_every_band(self):
         """The legend is what makes dot size decodable, so every band must draw."""
-        legend = re.search(r'<svg [^>]*data-aq="legend".*?</svg>', self.html, re.S)
+        legend = re.search(LEGEND, self.html, re.S)
         self.assertIsNotNone(legend)
         radii = {float(r) for r in re.findall(r'<circle[^>]*\br="([\d.]+)"', legend.group(0))}
         self.assertEqual(radii, self.allowed)
@@ -276,7 +288,7 @@ class TestScaleSwitching(unittest.TestCase):
         cls.pages = {k: render("Central", scale=k) for k in cls.CASES}
 
     def legend(self, html):
-        svg = re.search(r'<svg [^>]*data-aq="legend".*?</svg>', html, re.S)
+        svg = re.search(LEGEND, html, re.S)
         self.assertIsNotNone(svg)
         return svg.group(0)
 
@@ -340,9 +352,7 @@ class TestAqicnSource(unittest.TestCase):
         return out
 
     def map_values(self, html):
-        names = re.findall(r'data-aq="name"[^>]*>([A-Z]+)</text>', html)
-        nums = re.findall(r'data-aq="value"[^>]*>([^<]*)</text>', html)
-        return dict(zip(names, nums))
+        return map_labels(html)
 
     def test_token_makes_every_region_match_aqicn_exactly(self):
         self.assertEqual(self.map_values(self.with_token), self.expected())
@@ -389,9 +399,7 @@ class TestMissingData(unittest.TestCase):
             o["IDX_0"]["data"]["items"][0]["readings"]["pm25_twenty_four_hourly"]["east"] = None
             o["IDX_1"]["data"]["items"][0]["readings"]["pm25_one_hourly"]["east"] = None
         html = render("Central", mutate=drop)
-        names = re.findall(r'data-aq="name"[^>]*>([A-Z]+)</text>', html)
-        nums = re.findall(r'data-aq="value"[^>]*>([^<]*)</text>', html)
-        self.assertEqual(dict(zip(names, nums))["EAST"], "–")
+        self.assertEqual(map_labels(html)["EAST"], "–")
         _, _, value, _ = HEADLINE.search(html).groups()
         self.assertTrue(value.isdigit(), "a missing neighbour must not blank the headline")
 

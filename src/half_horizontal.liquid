@@ -35,8 +35,8 @@
 
         {%- if has_forecast -%}
           <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
-          <svg class="block" data-aq="spark" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
-            <polyline data-aq="spark-line" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
+          <svg class="block" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
+            <polyline fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
           </svg>
         {%- else -%}
           <span class="label label--small label--gray 1bit:text--black">Forecast unavailable</span>

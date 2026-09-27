@@ -90,7 +90,7 @@ class TestNoStyleBlock(unittest.TestCase):
         for name in ("full", "shared"):
             text = (SRC / ("%s.liquid" % name)).read_text()
             for tag in re.findall(r"<svg\b[^>]*>", text):
-                if 'data-aq="spark"' in tag:
+                if 'preserveAspectRatio="none"' in tag:
                     continue  # no text
                 self.assertIn('font-family="Inter', tag, "%s.liquid: svg without a font" % name)
 
@@ -108,10 +108,8 @@ class TestDarkMode(unittest.TestCase):
                                 "%s.liquid hard-codes a colour dark mode cannot swap" % name)
 
     def test_halos_use_the_background_colour(self):
-        halos = re.findall(r'<text class="([^"]*)" data-aq="halo"', SHARED)
-        self.assertEqual(len(halos), 2, "expected a halo for the name and the value")
-        for h in halos:
-            self.assertIn("text--white", h)
+        halos = re.findall(r'<text class="text--white"[^>]*stroke="currentColor"', SHARED)
+        self.assertEqual(len(halos), 2, "expected a text--white halo for the name and the value")
         self.assertNotIn("dark:text--black", SHARED,
                          "dark mode already swaps text--white to black; the override undoes it")
 

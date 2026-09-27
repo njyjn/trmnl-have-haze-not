@@ -48,7 +48,7 @@
         {%- endcomment -%}
         {%- assign col_w = 430 | divided_by: band_count -%}
         {%- assign half_w = col_w | divided_by: 2 -%}
-        <svg class="block value--tnums" data-aq="legend" viewBox="0 0 430 40" width="100%" font-family="Inter Variable, Inter, sans-serif" fill="currentColor">
+        <svg class="block value--tnums" viewBox="0 0 430 40" width="100%" font-family="Inter Variable, Inter, sans-serif" fill="currentColor">
           {%- for lbl in band_short -%}
             {%- assign cx = forloop.index0 | times: col_w | plus: half_w -%}
             <circle cx="{{ cx }}" cy="8" r="{{ band_radii[forloop.index0] }}"/>
@@ -59,7 +59,7 @@
               {%- assign prev = forloop.index0 | minus: 1 -%}
               {%- assign edge = band_edges[prev] | plus: 1 -%}
             {%- endif -%}
-            <text data-aq="legend-scale" x="{{ cx }}" y="37" text-anchor="middle" font-size="12" font-weight="700">{{ edge }}{% if forloop.last %}+{% endif %}</text>
+            <text x="{{ cx }}" y="37" text-anchor="middle" font-size="12" font-weight="700">{{ edge }}{% if forloop.last %}+{% endif %}</text>
           {%- endfor -%}
         </svg>
 

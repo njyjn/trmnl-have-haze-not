@@ -16,30 +16,16 @@
       <div class="border--h-5"></div>
       <div class="item">
         <div class="content">
-          <span class="label label--small">{{ scale_name }} &middot; {{ home_label }}</span>
-          <span class="value value--xxlarge value--tnums">{{ home_value }}</span>
-          <span class="title title--small">{{ home_band_label }}</span>
-          <span class="description">{{ dom_name }} leading &middot; PM2.5 {{ home_pm25 }}</span>
+          <span class="label label--small lg:label--base">{{ scale_name }} &middot; {{ home_label }}</span>
+          <span class="value value--xxlarge lg:value--xxxlarge value--tnums">{{ home_value }}</span>
+          <span class="title title--small lg:title--base">{{ home_band_label }}</span>
+          <span class="description lg:description--large">{{ dom_name }} leading &middot; PM2.5 {{ home_pm25 }}</span>
         </div>
       </div>
 
       <div class="hidden lg:block portrait:block w--full">
         <div class="border--h-5"></div>
-        <div class="lg:portrait:hidden">
-          <span class="label label--small">All regions</span>
-          {%- comment -%} Five across does not fit the OG rotated (230px wide); three does. {%- endcomment -%}
-          <div class="grid grid--cols-5 portrait:grid--cols-3">
-            {%- for layer in map_layers -%}
-              {%- assign rname = layer | split: '|' | first -%}
-              <div class="item item--shrink">
-                <div class="content">
-                  <span class="label label--small">{{ rname | slice: 0, 1 | upcase }}</span>
-                  <span class="value value--small value--tnums">{{ region_values[forloop.index0] }}</span>
-                </div>
-              </div>
-            {%- endfor -%}
-          </div>
-        </div>
+        <div class="lg:portrait:hidden">{{ region_row }}</div>
 
         {%- comment -%}
           The X rotated is 1040px tall: room for the full per-region table
@@ -47,25 +33,41 @@
         {%- endcomment -%}
         <div class="hidden lg:portrait:block">
           <div class="grid grid--cols-4">
-            <span class="label label--small">Region</span>
-            <span class="label label--small">{{ scale_short }}</span>
-            <span class="label label--small">PM2.5</span>
-            <span class="label label--small">PM10</span>
+            <span class="label label--small lg:label--base">Region</span>
+            <span class="label label--small lg:label--base">{{ scale_short }}</span>
+            <span class="label label--small lg:label--base">PM2.5</span>
+            <span class="label label--small lg:label--base">PM10</span>
           </div>
           {%- for layer in map_layers -%}
             {%- assign rname = layer | split: '|' | first -%}
             <div class="grid grid--cols-4">
-              <span class="title title--small">{{ rname | capitalize }}</span>
-              <span class="value value--xsmall value--tnums">{{ region_values[forloop.index0] }}</span>
-              <span class="value value--xsmall value--tnums">{{ readings.pm25_twenty_four_hourly[rname] }}</span>
-              <span class="value value--xsmall value--tnums">{{ readings.pm10_twenty_four_hourly[rname] }}</span>
+              <span class="title title--small lg:title--base">{{ rname | capitalize }}</span>
+              <span class="value value--xsmall lg:value--small value--tnums">{{ region_values[forloop.index0] }}</span>
+              <span class="value value--xsmall lg:value--small value--tnums">{{ readings.pm25_twenty_four_hourly[rname] }}</span>
+              <span class="value value--xsmall lg:value--small value--tnums">{{ readings.pm10_twenty_four_hourly[rname] }}</span>
             </div>
           {%- endfor -%}
         </div>
 
         <div class="border--h-5"></div>
 
-        {{ fc_block }}
+        {{ fc_block_lg }}
+
+        {%- comment -%} Still height to spare on the X rotated: the neighbouring capitals. {%- endcomment -%}
+        <div class="hidden lg:portrait:block">
+          <div class="border--h-5"></div>
+          <span class="label label--small lg:label--base">Regional &middot; {{ scale_city_note }}</span>
+          <div class="grid grid--cols-3">
+            {%- for city in om_cities -%}
+              <div class="item item--shrink">
+                <div class="content">
+                  <span class="label label--small lg:label--base">{{ city_names[forloop.index0] }}</span>
+                  <span class="value value--small value--tnums">{{ city_values[forloop.index0] }}</span>
+                </div>
+              </div>
+            {%- endfor -%}
+          </div>
+        </div>
       </div>
     </div>
   {%- endif -%}

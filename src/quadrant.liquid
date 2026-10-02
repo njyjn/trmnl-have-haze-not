@@ -1,12 +1,28 @@
-{%- comment -%} One quarter of a 2x2 mashup: the number, the band, nothing else. {%- endcomment -%}
+{%- comment -%}
+  One quarter of a 2x2 mashup. On the OG that is the number and its band.
+  The X's quarter (520x390, or 390x520 rotated) has room the OG's does not:
+  the advice and all five regions join in there (lg:), and the pollutant
+  readings as well when it is rotated (lg:portrait:).
+{%- endcomment -%}
 
 <div class="layout layout--col layout--center">
   {%- if has_psi == false -%}
     <span class="title title--small">No data</span>
   {%- else -%}
-    <span class="label label--small">{{ scale_short }} &middot; {{ home_label }}</span>
+    <span class="label label--small lg:label--base">{{ scale_short }} &middot; {{ home_label }}</span>
     <span class="value value--xxxlarge portrait:value--xxlarge lg:portrait:value--xxxlarge value--tnums">{{ home_value }}</span>
-    <span class="title title--small">{{ home_band_label }}</span>
+    <span class="title title--small lg:title--base">{{ home_band_label }}</span>
+    <div class="hidden lg:block">
+      <span class="description lg:description--large">{{ home_band_advice }}</span>
+    </div>
+    <div class="hidden lg:block w--full">
+      <div class="border--h-5"></div>
+      {{ region_row }}
+    </div>
+    <div class="hidden lg:portrait:block w--full">
+      <div class="border--h-5"></div>
+      {{ pollutant_block_lg }}
+    </div>
   {%- endif -%}
 </div>
 

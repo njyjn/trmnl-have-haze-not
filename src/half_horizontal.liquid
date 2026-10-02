@@ -1,4 +1,9 @@
-{%- comment -%} Top or bottom half of a stacked mashup: headline, regions, forecast. {%- endcomment -%}
+{%- comment -%}
+  Top or bottom half of a stacked mashup: headline, regions, forecast.
+  The X steps the type up a size (lg:). Rotated, the X's half is 780x520 and
+  the headline no longer fills its row, so the pollutant readings join it
+  there (lg:portrait:) and nowhere else.
+{%- endcomment -%}
 
 <div class="layout layout--col">
   {%- if has_psi == false -%}
@@ -7,25 +12,35 @@
     </div>
   {%- else -%}
     <div class="grid grid--cols-3 w--full">
-      <div class="col--span-1 portrait:col--span-3 flex--col flex--stretch-x flex--center-y">
+      <div class="col--span-1 portrait:col--span-3 lg:portrait:col--span-1 flex--col flex--stretch-x flex--center-y">
         <div class="item">
           <div class="content">
-            <span class="label label--small">{{ scale_name }} &middot; {{ home_label }}</span>
-            <span class="value value--xxlarge value--tnums">{{ home_value }}</span>
-            <span class="title title--small">{{ home_band_label }}</span>
+            <span class="label label--small lg:label--base">{{ scale_name }} &middot; {{ home_label }}</span>
+            <span class="value value--xxlarge lg:value--xxxlarge value--tnums">{{ home_value }}</span>
+            <span class="title title--small lg:title--base">{{ home_band_label }}</span>
+            {%- comment -%} X landscape only: rotated, the advice sits in the cell beside the headline. {%- endcomment -%}
+            <div class="hidden lg:block lg:portrait:hidden">
+              <span class="description lg:description--large">{{ home_band_advice }}</span>
+            </div>
           </div>
         </div>
       </div>
 
+      <div class="hidden lg:portrait:col--span-2 flex--col flex--stretch-x flex--center-y gap--small">
+        <span class="description lg:description--large">{{ home_band_advice }}</span>
+        <div class="border--h-5"></div>
+        <div>{{ pollutant_block_lg }}</div>
+      </div>
+
       <div class="col--span-2 portrait:col--span-3 flex--col flex--stretch-x gap--small">
-        <span class="label label--small">All regions</span>
+        <span class="label label--small lg:label--base">All regions</span>
         <div class="flex flex--between gap--small">
           {%- for layer in map_layers -%}
             {%- assign rname = layer | split: '|' | first -%}
             <div class="item item--shrink">
               <div class="content">
-                <span class="label label--small">{{ rname | slice: 0, 1 | upcase }}</span>
-                <span class="value value--small value--tnums">{{ region_values[forloop.index0] }}</span>
+                <span class="label label--small lg:label--base">{{ rname | slice: 0, 1 | upcase }}</span>
+                <span class="value value--small lg:value--base value--tnums">{{ region_values[forloop.index0] }}</span>
               </div>
             </div>
           {%- endfor -%}
@@ -34,7 +49,7 @@
         <div class="border--h-5"></div>
 
         {%- if has_forecast -%}
-          <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
+          <span class="label label--small lg:label--base">PM2.5 next 24h &middot; {{ fc_trend }}</span>
           <svg class="block" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
             <polyline fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
           </svg>

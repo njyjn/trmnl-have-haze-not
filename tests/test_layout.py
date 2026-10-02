@@ -55,7 +55,13 @@ class TestColumnsAreProportional(unittest.TestCase):
     def test_half_horizontal_spans_fill_the_grid(self):
         text = (SRC / "half_horizontal.liquid").read_text()
         self.assertIn("grid grid--cols-3", text)
-        self.assertEqual(sum(spans(c)[""] for c in cells(text)), 3)
+        headline, extras, rest = [spans(c) for c in cells(text)]
+        self.assertEqual(headline[""] + rest[""], 3, "base split does not fill 3")
+        # X portrait: the pollutant readings sit beside the headline, and
+        # exist in no other layout (no base span, so `hidden` keeps them out).
+        self.assertNotIn("", extras)
+        self.assertEqual(headline["lg:portrait:"] + extras["lg:portrait:"], 3,
+                         "X portrait headline row does not fill 3")
 
     def test_grid_cells_do_not_use_fixed_width_utilities(self):
         for name in LAYOUTS:
@@ -126,6 +132,44 @@ class TestLintInlineStyleBudget(unittest.TestCase):
         markup = "".join((SRC / ("%s.liquid" % n)).read_text() for n in LAYOUTS + ("shared",))
         count = sum(markup.count(p) for p in self.PROPERTIES)
         self.assertLessEqual(count, 6, "trmnlp lint allows 6; markup has %d" % count)
+
+
+class TestMashupsUseTheX(unittest.TestCase):
+    """Review asked for the mashup views to use the X's extra room: type a
+    size up (lg:), and content that only exists there. The OG must not gain
+    any of it, and the full view keeps the sizes it was approved with."""
+
+    def view(self, name):
+        return (SRC / ("%s.liquid" % name)).read_text()
+
+    def test_half_views_step_the_headline_up_on_the_x(self):
+        for name in ("half_horizontal", "half_vertical"):
+            self.assertIn("value--xxlarge lg:value--xxxlarge", self.view(name),
+                          "%s headline does not scale on the X" % name)
+            self.assertIn("title--small lg:title--base", self.view(name))
+
+    def test_quadrant_extras_are_x_only(self):
+        q = self.view("quadrant")
+        for block in ("{{ region_row }}", "{{ home_band_advice }}", "{{ pollutant_block_lg }}"):
+            before = q[:q.index(block)]
+            wrapper = before[before.rindex('<div class="hidden'):]
+            self.assertRegex(wrapper, r'<div class="hidden lg:(portrait:)?block',
+                             "%s is not gated on the X" % block)
+        # the pollutant readings only fit the taller, rotated quarter
+        before = q[:q.index("{{ pollutant_block_lg }}")]
+        self.assertIn("lg:portrait:block", before[before.rindex('<div class="hidden'):])
+
+    def test_region_row_fits_five_across_in_the_rotated_quarter(self):
+        """value--base clips at five across in 370px; small fits."""
+        self.assertIn("lg:value--base lg:portrait:value--small", SHARED)
+
+    def test_full_view_keeps_its_sizes(self):
+        full = self.view("full")
+        self.assertNotIn("_lg }}", full, "full.liquid should use the unscaled blocks")
+        for name in ("fc_block", "pollutant_block", "headline_block"):
+            a = SHARED.index("{%- capture " + name + " -%}")
+            body = SHARED[a:SHARED.index("{%- endcapture -%}", a)]
+            self.assertNotIn("lg:label--base", body, "%s is shared with full and must stay unscaled" % name)
 
 
 class TestLayoutIsNotNested(unittest.TestCase):

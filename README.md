@@ -259,9 +259,9 @@ once you have adapted the templates.
 | Layout | Shows |
 |---|---|
 | `full` | map, legend, regional cities, headline, pollutants, forecast |
-| `half_vertical` | map and headline; on the X, also all five regions and the forecast |
-| `half_horizontal` | headline, all five regions, forecast |
-| `quadrant` | headline PSI and band |
+| `half_vertical` | map and headline; on the X, type a size up plus all five regions and the forecast, and the neighbouring capitals when rotated |
+| `half_horizontal` | headline, all five regions, forecast; on the X, type a size up plus the advice, and the pollutant readings when rotated |
+| `quadrant` | headline and band; on the X, also the advice and all five regions, and the pollutant readings when rotated |
 
 ![Half vertical](docs/screenshot-half_vertical.png)
 

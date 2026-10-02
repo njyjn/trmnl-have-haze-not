@@ -514,3 +514,30 @@
   </div>
   <span class="label label--small label--gray 1bit:text--black">24-hour average, &micro;g/m&sup3;</span>
 {%- endcapture -%}
+
+{%- comment -%}
+  The mashup slots step their type up a size on the X; the full view is
+  already sized for it and keeps the blocks as they are. Same markup, with
+  the framework's lg: size added to each label.
+{%- endcomment -%}
+{%- assign fc_block_lg = fc_block | replace: 'class="label label--small', 'class="label label--small lg:label--base' -%}
+{%- assign pollutant_block_lg = pollutant_block | replace: 'class="label label--small', 'class="label label--small lg:label--base' -%}
+
+{%- comment -%}
+  All five regions on one line, for the mashup views. Three across on the OG
+  rotated, where the slot is only 230px wide; five everywhere else.
+{%- endcomment -%}
+{%- capture region_row -%}
+  <span class="label label--small lg:label--base">All regions</span>
+  <div class="grid grid--cols-5 portrait:grid--cols-3 lg:portrait:grid--cols-5">
+    {%- for layer in map_layers -%}
+      {%- assign rname = layer | split: '|' | first -%}
+      <div class="item item--shrink">
+        <div class="content">
+          <span class="label label--small lg:label--base">{{ rname | slice: 0, 1 | upcase }}</span>
+          <span class="value value--small lg:value--base lg:portrait:value--small value--tnums">{{ region_values[forloop.index0] }}</span>
+        </div>
+      </div>
+    {%- endfor -%}
+  </div>
+{%- endcapture -%}

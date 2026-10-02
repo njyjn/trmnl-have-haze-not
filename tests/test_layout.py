@@ -163,6 +163,18 @@ class TestMashupsUseTheX(unittest.TestCase):
         """value--base clips at five across in 370px; small fits."""
         self.assertIn("lg:value--base lg:portrait:value--small", SHARED)
 
+    def test_half_vertical_fills_the_rotated_x(self):
+        """The content is shorter than the X's 1040px rotated half. The
+        column fills the height and spaces its sections out there, with
+        framework classes and only in that orientation."""
+        hv = self.view("half_vertical")
+        col = re.search(r'<div class="(flex flex--col [^"]*)">\s*<div class="w--full">\{\{ map_svg', hv)
+        self.assertIsNotNone(col, "main column not found")
+        self.assertIn("lg:portrait:h--full", col.group(1))
+        self.assertIn("lg:portrait:gap--distribute", col.group(1))
+        self.assertNotRegex(col.group(1), r"(?<!:)\bgap--distribute|(?<!:)\bh--full",
+                            "spacing must be scoped to lg:portrait:")
+
     def test_full_view_keeps_its_sizes(self):
         full = self.view("full")
         self.assertNotIn("_lg }}", full, "full.liquid should use the unscaled blocks")

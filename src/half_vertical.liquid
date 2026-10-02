@@ -3,6 +3,11 @@
   Wherever the half is taller than it is wide -- the X (520x780, 390x1040
   rotated) and the OG rotated (230x780) -- the regions and the forecast join
   in. The OG half in landscape (390x440) has no room for them.
+
+  Each section is a direct child of the one column, with its divider at its
+  top, so that on the X rotated -- where the content is shorter than the
+  1040px slot -- the column can fill the height and space the sections out
+  evenly (lg:portrait:h--full, lg:portrait:gap--distribute).
 {%- endcomment -%}
 
 <div class="layout layout--col">
@@ -11,8 +16,10 @@
       <span class="title title--small">No air quality data</span>
     </div>
   {%- else -%}
-    <div class="flex flex--col gap--small w--full">
+    <div class="flex flex--col gap--small w--full lg:portrait:h--full lg:portrait:gap--distribute">
       <div class="w--full">{{ map_svg }}</div>
+
+      <div class="flex flex--col flex--stretch-x gap--small w--full">
       <div class="border--h-5"></div>
       <div class="item">
         <div class="content">
@@ -21,6 +28,7 @@
           <span class="title title--small lg:title--base">{{ home_band_label }}</span>
           <span class="description lg:description--large">{{ dom_name }} leading &middot; PM2.5 {{ home_pm25 }}</span>
         </div>
+      </div>
       </div>
 
       <div class="hidden lg:block portrait:block w--full">
@@ -49,12 +57,15 @@
           {%- endfor -%}
         </div>
 
+      </div>
+
+      <div class="hidden lg:block portrait:block w--full">
         <div class="border--h-5"></div>
-
         {{ fc_block_lg }}
+      </div>
 
-        {%- comment -%} Still height to spare on the X rotated: the neighbouring capitals. {%- endcomment -%}
-        <div class="hidden lg:portrait:block">
+      {%- comment -%} Still height to spare on the X rotated: the neighbouring capitals. {%- endcomment -%}
+      <div class="hidden lg:portrait:block w--full">
           <div class="border--h-5"></div>
           <span class="label label--small lg:label--base">Regional &middot; {{ scale_city_note }}</span>
           <div class="grid grid--cols-3">
@@ -67,7 +78,6 @@
               </div>
             {%- endfor -%}
           </div>
-        </div>
       </div>
     </div>
   {%- endif -%}

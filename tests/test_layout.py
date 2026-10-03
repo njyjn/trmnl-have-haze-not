@@ -54,14 +54,36 @@ class TestColumnsAreProportional(unittest.TestCase):
 
     def test_half_horizontal_spans_fill_the_grid(self):
         text = (SRC / "half_horizontal.liquid").read_text()
-        self.assertIn("grid grid--cols-3", text)
-        headline, extras, rest = [spans(c) for c in cells(text)]
-        self.assertEqual(headline[""] + rest[""], 3, "base split does not fill 3")
-        # X portrait: the pollutant readings sit beside the headline, and
-        # exist in no other layout (no base span, so `hidden` keeps them out).
-        self.assertNotIn("", extras)
-        self.assertEqual(headline["lg:portrait:"] + extras["lg:portrait:"], 3,
-                         "X portrait headline row does not fill 3")
+        lead, rest, cities = [spans(c) for c in cells(text)]
+        # landscape: headline + bars in two thirds, regions + forecast in one,
+        # set apart by the wide gap
+        self.assertEqual((lead[""], rest[""]), (8, 4))
+        self.assertIn("landscape:gap--large", text)
+        # rotated: each takes a full row
+        self.assertEqual((lead["portrait:"], rest["portrait:"]), (12, 12))
+        # the capitals run along the bottom on the X, in both orientations:
+        # no base span, so `hidden` keeps them out of the OG's grid
+        self.assertEqual(cities, {"lg:": 12})
+        self.assertIn("hidden", cells(text)[2].split())
+        self.assertNotIn("lg:portrait:hidden", cells(text)[2])
+        # rotated, the X sets the regions and the forecast side by side to
+        # make room for that row; everywhere else they stack
+        self.assertIn("lg:portrait:grid lg:portrait:grid--cols-2", cells(text)[1])
+        self.assertIn('<div class="border--h-5 lg:portrait:hidden"></div>', text)
+
+    def test_half_horizontal_headline_is_as_wide_as_its_digits(self):
+        """A fixed column for the headline clipped the number in Chrome,
+        where the same digits set ~10px wider than in the Firefox render.
+        The headline and the bars share a flex row instead: the headline
+        takes its content's width and the bars grow into the rest."""
+        text = (SRC / "half_horizontal.liquid").read_text()
+        row = re.search(r'<div class="(col--span-8[^"]*)">\s*<div class="flex flex--col flex--left">'
+                        r'.*?</div>\s*</div>\s*<div class="grow">\{\{ pollutant_bars \}\}</div>', text, re.S)
+        self.assertIsNotNone(row, "headline and bars are not one flex row")
+        for cls in ("flex", "flex--row", "gap--large"):
+            self.assertIn(cls, row.group(1).split())
+        # the framework's .content wrapper is what clipped it (overflow: hidden)
+        self.assertNotIn('class="content"', text[row.start():row.end()].split("{{ pollutant_bars }}")[0])
 
     def test_grid_cells_do_not_use_fixed_width_utilities(self):
         for name in LAYOUTS:
@@ -143,45 +165,117 @@ class TestMashupsUseTheX(unittest.TestCase):
         return (SRC / ("%s.liquid" % name)).read_text()
 
     def test_half_views_step_the_headline_up_on_the_x(self):
-        for name in ("half_horizontal", "half_vertical"):
+        for name in ("half_horizontal", "half_vertical", "quadrant"):
             self.assertIn("value--xxlarge lg:value--xxxlarge", self.view(name),
                           "%s headline does not scale on the X" % name)
             self.assertIn("title--small lg:title--base", self.view(name))
 
     def test_quadrant_extras_are_x_only(self):
         q = self.view("quadrant")
-        for block in ("{{ region_row }}", "{{ home_band_advice }}", "{{ pollutant_block_lg }}"):
+        def wrapper(block):
             before = q[:q.index(block)]
-            wrapper = before[before.rindex('<div class="hidden'):]
-            self.assertRegex(wrapper, r'<div class="hidden lg:(portrait:)?block',
-                             "%s is not gated on the X" % block)
-        # the pollutant readings only fit the taller, rotated quarter
-        before = q[:q.index("{{ pollutant_block_lg }}")]
-        self.assertIn("lg:portrait:block", before[before.rindex('<div class="hidden'):])
+            return before[before.rindex('<div class="hidden'):].split(">")[0]
+        self.assertIn("hidden lg:block", wrapper("{{ home_band_advice }}"))
+        # the five regions fit the X's quarter in both orientations
+        self.assertEqual(wrapper("{{ region_row }}"), '<div class="hidden lg:block w--full"')
+
+    def test_stacked_bars_except_where_height_is_short(self):
+        """The same five pollutants everywhere. The name sits on its own
+        line above the bar by default; three slots have no height for that
+        and set the name beside the bar instead."""
+        def holder(view, capture):
+            text = self.view(view)
+            out = []
+            for m in re.finditer(re.escape("{{ %s }}" % capture), text):
+                before = text[:m.start()]
+                out.append(before[before.rindex('<div class="'):].split('"')[1])
+            return out
+        # OG full landscape: inline in the side column; the X's is stacked
+        self.assertEqual(holder("full", "pollutant_bars_inline"), ["lg:hidden"])
+        self.assertIn("hidden lg:block", holder("full", "pollutant_bars"))
+        self.assertEqual(len(holder("full", "pollutant_bars")), 2)   # + the portrait row
+        # X half_vertical rotated: inline; the OG rotated and both landscapes are stacked
+        self.assertEqual(holder("half_vertical", "pollutant_bars_inline"), ["hidden lg:block"])
+        hv = holder("half_vertical", "pollutant_bars")
+        self.assertEqual(len(hv), 2)
+        self.assertIn("portrait:hidden", hv[0])      # beside the headline, landscape
+        self.assertEqual(hv[1], "lg:hidden")         # under it, OG rotated
+        # X quadrant rotated: inline; everything else stacked
+        self.assertEqual(holder("quadrant", "pollutant_bars_inline"), ["hidden lg:portrait:block"])
+        self.assertEqual(holder("quadrant", "pollutant_bars"), ["lg:portrait:hidden"])
+        # half_horizontal: stacked throughout
+        self.assertEqual(holder("half_horizontal", "pollutant_bars_inline"), [])
+        self.assertEqual(len(holder("half_horizontal", "pollutant_bars")), 1)
+
+    def test_both_settings_draw_the_same_rows(self):
+        """Stacked and inline are built in one loop from one bar, so they
+        cannot drift apart."""
+        loop = SHARED[SHARED.index("{%- for bname in bar_names -%}"):SHARED.index("{%- capture pollutant_bars -%}")]
+        self.assertEqual(loop.count("{%- capture bar_track -%}"), 1)
+        self.assertEqual(loop.count("{{ bar_track }}"), 2)
+        self.assertNotIn("compact", SHARED)
+
+    def test_rotated_half_keeps_the_map_and_adds_the_table(self):
+        """Both devices show the map when rotated, then the per-region
+        table in place of the one-line region row."""
+        hv = self.view("half_vertical")
+        self.assertIn('<div class="w--full">{{ map_svg }}</div>', hv)
+        self.assertRegex(hv, r'<div class="hidden portrait:block">\s*(\{%- comment -%\}.*?\{%- endcomment -%\}\s*)?<div class="grid grid--cols-5">')
+        self.assertIn('<div class="portrait:hidden">{{ region_row }}</div>', hv)
 
     def test_region_row_fits_five_across_in_the_rotated_quarter(self):
         """value--base clips at five across in 370px; small fits."""
         self.assertIn("lg:value--base lg:portrait:value--small", SHARED)
 
-    def test_half_vertical_fills_the_rotated_x(self):
-        """The content is shorter than the X's 1040px rotated half. The
-        column fills the height and spaces its sections out there, with
+    def test_half_vertical_fills_its_height_when_rotated(self):
+        """Rotated, the content is shorter than the slot on both devices.
+        The column fills the height and spaces its sections out, with
         framework classes and only in that orientation."""
         hv = self.view("half_vertical")
-        col = re.search(r'<div class="(flex flex--col [^"]*)">\s*<div class="w--full">\{\{ map_svg', hv)
+        col = re.search(r'<div class="(flex flex--col gap--small w--full[^"]*)">', hv)
         self.assertIsNotNone(col, "main column not found")
-        self.assertIn("lg:portrait:h--full", col.group(1))
-        self.assertIn("lg:portrait:gap--distribute", col.group(1))
+        self.assertIn("portrait:h--full", col.group(1))
+        self.assertIn("portrait:gap--distribute", col.group(1))
         self.assertNotRegex(col.group(1), r"(?<!:)\bgap--distribute|(?<!:)\bh--full",
-                            "spacing must be scoped to lg:portrait:")
+                            "spacing must be scoped to portrait:")
 
-    def test_full_view_keeps_its_sizes(self):
-        full = self.view("full")
-        self.assertNotIn("_lg }}", full, "full.liquid should use the unscaled blocks")
-        for name in ("fc_block", "pollutant_block", "headline_block"):
+    def test_shared_blocks_scale_on_the_x(self):
+        """The X guide's --base resets and larger hero size, applied to the
+        blocks every view shares, so no view is left at OG sizes on the X."""
+        def body(name):
             a = SHARED.index("{%- capture " + name + " -%}")
-            body = SHARED[a:SHARED.index("{%- endcapture -%}", a)]
-            self.assertNotIn("lg:label--base", body, "%s is shared with full and must stay unscaled" % name)
+            return SHARED[a:SHARED.index("{%- endcapture -%}", a)]
+        for name in ("fc_block", "bar_row", "bar_row_inline", "pollutant_bars", "pollutant_bars_inline", "headline_block"):
+            # labels inside an lg:hidden wrapper never show on the X, so
+            # they have nothing to scale to
+            shown_on_x = re.sub(r'<div class="lg:hidden">.*?</div>\s*</div>', "", body(name), flags=re.S)
+            self.assertNotRegex(shown_on_x, r'class="label label--small(?! lg:label--base)',
+                                "%s has a label that does not scale on the X" % name)
+        head = body("headline_block")
+        self.assertIn("value--xxxlarge lg:value--mega", head)
+        # rotated, the headline shares a row three ways and stays at xxxlarge
+        self.assertIn("lg:portrait:value--xxxlarge", head)
+
+    def test_full_side_column_fills_the_x(self):
+        """Centred, the column left ~170px empty above and below on the X.
+        It distributes its blocks over the full height there instead."""
+        side = cells(self.view("full"))[1]
+        self.assertIn("lg:gap--distribute", side)
+        self.assertIn("flex--center-y", side, "the OG still centres the column")
+
+
+class TestFullViewTable(unittest.TestCase):
+    """The X's per-region table carries every pollutant NEA measures."""
+
+    def test_seven_columns_on_the_x(self):
+        full = (SRC / "full.liquid").read_text()
+        table = full[full.index('<div class="hidden lg:block">\n          <div class="grid grid--cols-7">'):]
+        table = table[:table.index("{%- endfor -%}")]
+        # sub-indices, as the bars show: NEA's CO concentration is whole mg/m3, 1 almost everywhere
+        for key in ("pm25", "pm10", "o3", "so2", "co"):
+            self.assertIn("readings.%s_sub_index[rname]" % key, table)
+        self.assertNotIn("_hourly[rname]", table)
+        self.assertEqual(table.count('class="grid grid--cols-7"'), 2, "header row and one row per region")
 
 
 class TestLayoutIsNotNested(unittest.TestCase):
@@ -238,9 +332,10 @@ class TestConditionalDetail(unittest.TestCase):
 
     def test_region_table_only_on_the_x(self):
         full = (SRC / "full.liquid").read_text()
-        block = re.search(r'<div class="hidden lg:block">(.*?)\{%- endfor -%\}', full, re.S)
+        # several blocks are X-only; the table is the one built on a 4-column grid
+        block = re.search(r'<div class="hidden lg:block">\s*<div class="grid grid--cols-7">(.*?)\{%- endfor -%\}', full, re.S)
         self.assertIsNotNone(block, "region table is not gated on lg:")
-        self.assertIn("pm10_twenty_four_hourly", block.group(1))
+        self.assertIn("pm10_sub_index", block.group(1))
 
 
 class TestPortrait(unittest.TestCase):
@@ -266,7 +361,7 @@ class TestPortrait(unittest.TestCase):
         row = self.full.index('<div class="hidden portrait:block')
         grid = self.full.index('<div class="grid grid--cols-12')
         self.assertLess(row, grid)
-        for block in ("headline_block", "pollutant_block", "fc_block"):
+        for block in ("headline_block", "pollutant_bars", "fc_block"):
             self.assertEqual(self.full.count("{{ %s }}" % block), 2,
                              "%s should render beside the map and in the portrait row" % block)
 
@@ -276,7 +371,7 @@ class TestOneBitLegibility(unittest.TestCase):
     that forces them black there, and review asks for it."""
 
     def test_every_grey_label_is_forced_black_on_1bit(self):
-        for name in LAYOUTS:
+        for name in LAYOUTS + ("shared",):
             text = (SRC / ("%s.liquid" % name)).read_text()
             for m in re.finditer(r'class="([^"]*label--gray[^"]*)"', text):
                 self.assertIn("1bit:text--black", m.group(1),

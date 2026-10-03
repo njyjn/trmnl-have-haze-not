@@ -1,8 +1,15 @@
 {%- comment -%}
-  Top or bottom half of a stacked mashup: headline, regions, forecast.
-  The X steps the type up a size (lg:). Rotated, the X's half is 780x520 and
-  the headline no longer fills its row, so the pollutant readings join it
-  there (lg:portrait:) and nowhere else.
+  Top or bottom half of a stacked mashup, on a 12-column grid.
+
+  The headline and the pollutant bars sit side by side in one cell: two
+  thirds of the width in landscape, with the regions and the forecast in
+  the last third, set apart by a wide gap; the full width when rotated,
+  with the regions and forecast in the row below.
+
+  The X steps the type up a size (lg:) and adds the advice, the best/worst
+  hour and the neighbouring capitals along the bottom. Rotated (780x520),
+  the regions and the forecast sit side by side to leave room for that row.
+  The forecast line takes whatever height is left.
 {%- endcomment -%}
 
 <div class="layout layout--col">
@@ -11,51 +18,109 @@
       <span class="title title--small">No air quality data</span>
     </div>
   {%- else -%}
-    <div class="grid grid--cols-3 w--full">
-      <div class="col--span-1 portrait:col--span-3 lg:portrait:col--span-1 flex--col flex--stretch-x flex--center-y">
-        <div class="item">
-          <div class="content">
-            <span class="label label--small lg:label--base">{{ scale_name }} &middot; {{ home_label }}</span>
-            <span class="value value--xxlarge lg:value--xxxlarge value--tnums">{{ home_value }}</span>
-            <span class="title title--small lg:title--base">{{ home_band_label }}</span>
-            {%- comment -%} X landscape only: rotated, the advice sits in the cell beside the headline. {%- endcomment -%}
-            <div class="hidden lg:block lg:portrait:hidden">
-              <span class="description lg:description--large">{{ home_band_advice }}</span>
-            </div>
+    <div class="grid grid--cols-12 landscape:gap--large w--full lg:h--full">
+      {%- comment -%}
+        The headline and the bars share one cell as a row. The headline takes
+        the width its own digits need -- which differs by a few px between
+        browsers, so a fixed column either wastes space or clips the number
+        -- and the bars take the rest.
+      {%- endcomment -%}
+      <div class="col--span-8 portrait:col--span-12 flex flex--row flex--center-y gap--large">
+        <div class="flex flex--col flex--left">
+          <span class="label label--small lg:label--base">{{ scale_name }} &middot; {{ home_label }}</span>
+          <span class="value value--xxlarge lg:value--xxxlarge value--tnums">{{ home_value }}</span>
+          <span class="title title--small lg:title--base">{{ home_band_label }}</span>
+          <div class="hidden lg:block">
+            <span class="description lg:description--large">{{ home_band_advice }}</span>
           </div>
         </div>
+        <div class="grow">{{ pollutant_bars }}</div>
       </div>
 
-      <div class="hidden lg:portrait:col--span-2 flex--col flex--stretch-x flex--center-y gap--small">
-        <span class="description lg:description--large">{{ home_band_advice }}</span>
-        <div class="border--h-5"></div>
-        <div>{{ pollutant_block_lg }}</div>
-      </div>
-
-      <div class="col--span-2 portrait:col--span-3 flex--col flex--stretch-x gap--small">
-        <span class="label label--small lg:label--base">All regions</span>
-        <div class="flex flex--between gap--small">
-          {%- for layer in map_layers -%}
-            {%- assign rname = layer | split: '|' | first -%}
-            <div class="item item--shrink">
-              <div class="content">
-                <span class="label label--small lg:label--base">{{ rname | slice: 0, 1 | upcase }}</span>
-                <span class="value value--small lg:value--base value--tnums">{{ region_values[forloop.index0] }}</span>
-              </div>
+      {%- comment -%}
+        Regions, then the forecast. Stacked everywhere except the X rotated,
+        where they sit side by side (lg:portrait:grid) so that the row of
+        capitals fits underneath, as it does in landscape.
+      {%- endcomment -%}
+      <div class="col--span-4 portrait:col--span-12 flex flex--col flex--stretch-x gap--small lg:portrait:grid lg:portrait:grid--cols-2 lg:portrait:gap--large">
+        <div class="shrink-0">
+          <span class="label label--small lg:label--base">All regions</span>
+          {%- comment -%}
+            X: the regions as columns, the scale on top and then the
+            sub-indices of the pollutants that move (SO2 and CO sit in single
+            figures almost always), as in the bars beside it. In landscape
+            the scale steps down to the size of the rest, and the forecast
+            below takes what height is left.
+          {%- endcomment -%}
+          <div class="hidden lg:block">
+            <div class="grid grid--cols-6">
+              <span></span>
+              {%- for layer in map_layers -%}
+                <span class="label label--base">{{ layer | split: '|' | first | slice: 0, 1 | upcase }}</span>
+              {%- endfor -%}
             </div>
-          {%- endfor -%}
+            <div class="grid grid--cols-6">
+              <span class="label label--small">{{ scale_short }}</span>
+              {%- for layer in map_layers -%}
+                <span class="value value--xsmall lg:portrait:value--small value--tnums">{{ region_values[forloop.index0] }}</span>
+              {%- endfor -%}
+            </div>
+            {%- assign hh_keys = 'pm25,pm10,o3' | split: ',' -%}
+            {%- assign hh_names = 'PM2.5,PM10,Ozone' | split: ',' -%}
+            {%- for key in hh_keys -%}
+              {%- assign sub_key = key | append: '_sub_index' -%}
+              <div class="grid grid--cols-6">
+                <span class="label label--small">{{ hh_names[forloop.index0] }}</span>
+                {%- for layer in map_layers -%}
+                  {%- assign rname = layer | split: '|' | first -%}
+                  <span class="value value--xsmall value--tnums">{{ readings[sub_key][rname] | default: '–' }}</span>
+                {%- endfor -%}
+              </div>
+            {%- endfor -%}
+          </div>
+          <div class="flex flex--between gap--small lg:hidden">
+            {%- for layer in map_layers -%}
+              {%- assign rname = layer | split: '|' | first -%}
+              <div class="item item--shrink">
+                <div class="content">
+                  {%- comment -%} Five across: a third of the OG's width in landscape, the full width rotated. {%- endcomment -%}
+                  <span class="label label--small">{{ rname | slice: 0, 1 | upcase }}</span>
+                  <span class="value value--xsmall portrait:value--small value--tnums">{{ region_values[forloop.index0] }}</span>
+                </div>
+              </div>
+            {%- endfor -%}
+          </div>
         </div>
 
-        <div class="border--h-5"></div>
+        <div class="border--h-5 lg:portrait:hidden"></div>
 
-        {%- if has_forecast -%}
-          <span class="label label--small lg:label--base">PM2.5 next 24h &middot; {{ fc_trend }}</span>
-          <svg class="block" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
-            <polyline fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
-          </svg>
-        {%- else -%}
-          <span class="label label--small label--gray 1bit:text--black">Forecast unavailable</span>
-        {%- endif -%}
+        <div class="flex flex--col flex--stretch-x gap--small grow">
+          {%- if has_forecast -%}
+            <span class="label label--small lg:label--base">PM2.5 next 24h &middot; {{ fc_trend }}</span>
+            <svg class="block grow portrait:h--[54px] lg:portrait:h--[64px]" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
+              <polyline fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
+            </svg>
+            <div class="hidden lg:block">
+              <div class="flex flex--between">
+                <span class="label label--base label--gray 1bit:text--black">Best {{ fc_best_at }} &middot; {{ fc_best | round }}</span>
+                <span class="label label--base label--gray 1bit:text--black">Worst {{ fc_worst_at }} &middot; {{ fc_worst | round }}</span>
+              </div>
+            </div>
+          {%- else -%}
+            <span class="label label--small label--gray 1bit:text--black">Forecast unavailable</span>
+          {%- endif -%}
+        </div>
+      </div>
+
+      {%- comment -%}
+        X only, both orientations: the regional strip along the bottom, in
+        the drawing made for the row's full width (1000 units in landscape,
+        760 rotated). No base span, so `hidden` keeps the row out of the
+        OG's grid.
+      {%- endcomment -%}
+      <div class="hidden lg:col--span-12 flex--col flex--stretch-x gap--small">
+        <div class="border--h-5"></div>
+        <div>{{ city_strip_wide }}</div>
       </div>
     </div>
   {%- endif -%}

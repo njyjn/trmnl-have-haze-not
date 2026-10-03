@@ -22,22 +22,17 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # (scale, region, value, band)
 HEADLINE = re.compile(
-    r'label--small">([^<&]*) &middot; ([^<]*)</span>\s*'
+    r'label--small[^"]*">([^<&]*) &middot; ([^<]*)</span>\s*'
     r'<span class="value value--xxxlarge[^"]*">([^<]*)</span>\s*'
-    r'<span class="title title--small">([^<]*)</span>'
+    r'<span class="title title--small[^"]*">([^<]*)</span>'
 )
-# Region rows in the detail table: name, scale value, PM2.5, PM10
+# Region rows in the detail table: name, scale value, PM2.5 and PM10 sub-indices
 REGION_ROW = re.compile(
     r'title title--small">([^<]*)</span>\s*'
     r'<span class="value value--xsmall value--tnums">([^<]*)</span>\s*'
     r'<span class="value value--xsmall value--tnums">([^<]*)</span>\s*'
     r'<span class="value value--xsmall value--tnums">([^<]*)</span>'
 )
-POLLUTANT = re.compile(
-    r'label--small">(PM2\.5|PM10)</span>\s*<span class="value[^"]*">([^<]*)</span>'
-)
-
-
 # The legend is the 430x40 SVG; the map is the one that draws the coastline.
 LEGEND = r'<svg [^>]*viewBox="0 0 430 40".*?</svg>'
 
@@ -48,6 +43,45 @@ def map_labels(html):
     svg = next(s for s in re.findall(r"<svg\b.*?</svg>", html, re.S) if "<path " in s)
     texts = re.findall(r'<text x="[^"]*" y="[^"]*">([^<]*)</text>', svg)
     return dict(zip(texts[0::2], texts[1::2]))
+
+
+# The regional strip comes in four drawings, each made at the width it is
+# shown at: the OG's (first five cities, 430 wide), the X's landscape and
+# rotated ones (all ten, 680 and 760 wide), and the X's landscape half,
+# full width (1000, in half_horizontal). Shape: (viewBox, line y, label
+# rows, chars-per-width estimate the template uses for normal/bold text).
+STRIPS = {
+    "og": ("0 0 430 46", 24, (14, 42), 6.6, 7.3),
+    "x": ("0 0 680 56", 28, (15, 52), 8.6, 9.5),
+    "xp": ("0 0 760 52", 26, (14, 49), 8.6, 9.5),
+    "xw": ("0 0 1000 56", 28, (15, 52), 8.6, 9.5),
+}
+STRIP_CITIES = {"og": 5, "x": 10, "xp": 10, "xw": 10}
+STRIP_VIEW = {"xw": "half_horizontal"}   # the rest are drawn in full
+
+
+class Page(str):
+    """full.html, with every view's HTML in .views for what full does not show."""
+CITY_NAMES = ["Singapore", "Kuala Lumpur", "Jakarta", "Bangkok", "Manila",
+              "Johor Bahru", "Pekanbaru", "Palembang", "Pontianak", "Kuching"]   # fixture order
+
+
+def strip_svg(html, size):
+    if size in STRIP_VIEW:
+        html = html.views[STRIP_VIEW[size]]
+    m = re.search(r'<svg class="block" viewBox="%s".*?</svg>' % STRIPS[size][0], html, re.S)
+    return m.group(0) if m else None
+
+
+def city_strip(html, size="og"):
+    """The regional strip, left to right: [(name, dot_x, label_x, label_y, weight)]."""
+    svg = strip_svg(html, size)
+    if not svg:
+        return None
+    line_y = STRIPS[size][1]
+    return [(name, float(cx), float(x), int(y), weight) for cx, x, y, weight, name in re.findall(
+        r'<circle cx="([\d.]+)" cy="%d" r="[\d.]+"/>\s*<text x="([\d.]+)" y="(\d+)" font-weight="(\d+)">([^<]*)</text>' % line_y,
+        svg)]
 
 
 def docker_available():
@@ -124,7 +158,9 @@ def render(home_region, scale=None, waqi=False, mutate=None):
             ],
             capture_output=True, timeout=600, check=True,
         )
-        return (project / "_build" / "full.html").read_text()
+        page = Page((project / "_build" / "full.html").read_text())
+        page.views = {f.stem: f.read_text() for f in (project / "_build").glob("*.html")}
+        return page
 
 
 @unittest.skipUnless(docker_available(), "docker not available")
@@ -144,8 +180,8 @@ class TestCustomFieldCasing(unittest.TestCase):
         self.assertNotEqual(band, "Hazardous", "nil PSI fell through the band chain")
 
     def test_pollutants_resolve(self):
-        found = dict(POLLUTANT.findall(self.html))
-        self.assertEqual(set(found), {"PM2.5", "PM10"})
+        found = {name: value for name, _, _, value in BAR.findall(self.html)}
+        self.assertEqual(set(found), set(SUB_INDEX))
         for name, value in found.items():
             self.assertTrue(value.strip().isdigit(), "%s rendered blank" % name)
 
@@ -179,7 +215,10 @@ class TestRenderedDotSizes(unittest.TestCase):
         cls.allowed = {float(r) for r in re.findall(r'<circle[^>]*r="([\d.]+)"', svg)}
 
     def test_all_circle_radii_come_from_band_radii(self):
-        radii = {float(r) for r in re.findall(r'<circle[^>]*\br="([\d.]+)"', self.html)}
+        # the map's dots: the SVG that draws the coastline (the regional
+        # strip has dots of its own, which are markers, not readings)
+        map_svg = next(s for s in re.findall(r"<svg\b.*?</svg>", self.html, re.S) if "<path " in s)
+        radii = {float(r) for r in re.findall(r'<circle[^>]*\br="([\d.]+)"', map_svg)}
         self.assertTrue(radii, "no dots rendered")
         self.assertTrue(
             radii <= self.allowed,
@@ -308,27 +347,29 @@ class TestScaleSwitching(unittest.TestCase):
             dots = re.findall(r'<circle[^>]*r="([\d.]+)"', self.legend(self.pages[choice]))
             self.assertEqual(len(dots), len(bands), "%s legend dots" % choice)
 
-    def test_cities_are_on_the_chosen_scale_too(self):
-        """The comparison row must never be in different units to the headline."""
-        values = {}
-        for choice in self.CASES:
-            found = re.findall(
-                r'label--small">([A-Z][a-z][^<]*)</span>\s*'
-                r'<span class="value value--small value--tnums">([^<]*)</span>',
-                self.pages[choice])
-            self.assertEqual(len(found), 5, "%s: expected five cities" % choice)
-            values[choice] = [int(v) for _, v in found]
-        # Same cities, same hour: an index reads higher than the raw
-        # concentration it is derived from, so the three must differ.
-        self.assertNotEqual(values["US AQI"], values["PM2.5"])
-        self.assertNotEqual(values["NEA PSI"], values["PM2.5"])
-
     def test_pm25_scale_shows_the_concentration_itself(self):
-        """On PM2.5 the region column must equal the PM2.5 column."""
+        """On PM2.5 the region column is NEA's 24-hour concentration, not a sub-index."""
+        psi = json.loads((ROOT / "fixtures" / "psi.json").read_text())["data"]["items"][0]["readings"]
         rows = REGION_ROW.findall(self.pages["PM2.5"])
         self.assertEqual(len(rows), 5)
-        for name, shown, pm25, _ in rows:
-            self.assertEqual(shown, pm25, "%s: scale column should be the PM2.5 value" % name)
+        for name, shown, sub, _ in rows:
+            region = name.lower()
+            self.assertEqual(shown, str(psi["pm25_twenty_four_hourly"][region]),
+                             "%s: scale column should be the PM2.5 value" % name)
+            self.assertEqual(sub, str(psi["pm25_sub_index"][region]),
+                             "%s: PM2.5 column should be the sub-index" % name)
+
+    def test_regional_strip_is_drawn_on_every_scale(self):
+        """Five cities on the OG's line and ten on the X's, whichever scale is
+        chosen, with no number printed for any of them."""
+        for choice in self.CASES:
+            for size, n in STRIP_CITIES.items():
+                names = CITY_NAMES[:n]
+                strip = city_strip(self.pages[choice], size)
+                self.assertIsNotNone(strip, "%s: no %s strip" % (choice, size))
+                self.assertEqual(sorted(n for n, *_ in strip), sorted(names), "%s %s" % (choice, size))
+                self.assertFalse(re.search(r">[^<]*\d[^<]*</text>", strip_svg(self.pages[choice], size)),
+                                 "%s: the %s strip prints a number" % (choice, size))
 
 
 @unittest.skipUnless(docker_available(), "docker not available")
@@ -367,18 +408,51 @@ class TestAqicnSource(unittest.TestCase):
         """If they matched, the token would be doing nothing."""
         self.assertNotEqual(self.map_values(self.with_token), self.map_values(self.without))
 
-    def test_singapore_city_entry_agrees_with_the_headline(self):
-        """Singapore appears twice on screen; it must not show two numbers."""
-        _, _, headline, _ = HEADLINE.search(self.with_token).groups()
-        cities = re.findall(
-            r'label--small">([A-Z][a-z][^<]*)</span>\s*'
-            r'<span class="value value--small value--tnums">([^<]*)</span>', self.with_token)
-        sg = dict(cities)["Singapore"]
-        self.assertEqual(sg, headline)
+    def test_regional_strip_places_cities_by_the_models_own_figure(self):
+        """Cleanest at the left end, worst at the right, the rest to scale
+        between them, straight from Open-Meteo's us_aqi. Same strip with or
+        without a token: it is a like-for-like comparison between cities,
+        so Singapore stays on the model too."""
+        om = json.loads((ROOT / "fixtures" / "open-meteo.json").read_text())
+        value = dict(zip(CITY_NAMES, [c["current"]["us_aqi"] for c in om]))
+        for size, n in STRIP_CITIES.items():
+            width = int(STRIPS[size][0].split()[2])
+            shown = {k: value[k] for k in CITY_NAMES[:n]}
+            lo, hi = min(shown.values()), max(shown.values())
+            strips = [city_strip(self.with_token, size), city_strip(self.without, size)]
+            self.assertEqual(strips[0], strips[1], "a token must not change the %s strip" % size)
+            strip = strips[0]
+            self.assertEqual([name for name, *_ in strip], sorted(shown, key=shown.get), size)
+            for name, dot_x, _, _, weight in strip:
+                want = 6 + (shown[name] - lo) * (width - 12) / (hi - lo)
+                self.assertAlmostEqual(dot_x, want, delta=0.1, msg="%s %s is not placed to scale" % (size, name))
+                self.assertEqual(weight, "700" if name == "Singapore" else "500")
 
+    def test_strip_labels_alternate_sides(self):
+        """Neighbours in rank go above and below the line in turn, so two
+        cities with nearly the same figure do not print on top of each other."""
+        for size in STRIPS:
+            above, below = STRIPS[size][2]
+            ys = [y for _, _, _, y, _ in city_strip(self.without, size)]
+            self.assertEqual(ys, [above if i % 2 == 0 else below for i in range(len(ys))], size)
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_a_label_moved_off_its_dot_has_a_leader(self):
+        """When crowding moves a label away from its dot, a thin line joins
+        them; a label still over its dot needs none."""
+        for size in STRIPS:
+            svg = strip_svg(self.without, size)
+            leaders = re.findall(r'<line x1="([\d.]+)" y1="\d+" x2="([\d.]+)" y2="\d+" stroke="currentColor" stroke-width="0.75"/>', svg)
+            for x1, x2 in leaders:
+                self.assertGreater(abs(float(x1) - float(x2)), 6, "%s: a leader where no label moved" % size)
+
+    def test_headline_region_number_is_not_repeated_as_a_city_figure(self):
+        """The headline is measured; the strip is modelled. No number for
+        Singapore may appear in the regional strip to contradict it."""
+        for html in (self.with_token, self.without):
+            block = html[html.index("Regional &middot; modelled"):]
+            block = block[:block.index("</svg>")]
+            self.assertFalse(re.search(r">\s*\d+\s*<", block), "a number is printed in the regional strip")
+
 
 
 @unittest.skipUnless(docker_available(), "docker not available")
@@ -421,3 +495,119 @@ class TestMissingData(unittest.TestCase):
         html = render("Central", mutate=empty)
         self.assertIn("Forecast unavailable", html)
 
+
+# One pollutant row: name, bar (solid when dominant), value. The name is
+# either on the line above the bar (stacked) or beside it (inline); the
+# gap between them differs, the three parts do not.
+BAR = re.compile(
+    r'<span class="label label--small lg:label--base[^"]*">(PM2\.5|PM10|Ozone|SO2|CO)</span>'
+    r'(?:\s*<div class="flex flex--row flex--center-y gap--small">)?\s*'
+    r'<div class="progress-bar progress-bar--small grow([^"]*)">\s*<div class="track">\s*'
+    r'<div class="fill" style="width: (\d+)%"></div>\s*</div>\s*</div>\s*'
+    r'<span class="value[^"]*">([^<]*)</span>')
+SUB_INDEX = {"PM2.5": "pm25_sub_index", "PM10": "pm10_sub_index", "Ozone": "o3_sub_index",
+             "SO2": "so2_sub_index", "CO": "co_sub_index"}
+
+
+@unittest.skipUnless(docker_available(), "docker not available")
+class TestPollutantBars(unittest.TestCase):
+    """The bars are the pollutant readout on every screen: the same five."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = render("Central")
+        cls.psi = json.loads((ROOT / "fixtures" / "psi.json").read_text())["data"]["items"][0]["readings"]
+
+    def test_each_bar_shows_its_sub_index(self):
+        rows = BAR.findall(self.html)
+        self.assertTrue(rows, "no bars rendered")
+        for name, _, width, value in rows:
+            sub = self.psi[SUB_INDEX[name]]["central"]
+            self.assertEqual(int(value), sub, "%s shows the wrong sub-index" % name)
+            self.assertEqual(int(width), min(100, sub * 100 // 200), "%s bar is the wrong length" % name)
+
+    def test_half_horizontal_region_table_shows_sub_indices(self):
+        """The X's half: a row per pollutant that moves, a column per region,
+        on the same sub-index scale as the bars."""
+        hh = self.html.views["half_horizontal"]
+        regions = ["north", "south", "east", "west", "central"]
+        for label, key in (("PM2.5", "pm25"), ("PM10", "pm10"), ("Ozone", "o3")):
+            m = re.search(r'<span class="label label--small">%s</span>((?:\s*<span class="value value--xsmall value--tnums">[^<]*</span>){5})'
+                          % re.escape(label), hh)
+            self.assertIsNotNone(m, "no %s row in half_horizontal" % label)
+            shown = re.findall(r">([^<]*)</span>", m.group(1))
+            self.assertEqual(shown, [str(self.psi[key + "_sub_index"][r]) for r in regions], label)
+
+    def test_all_five_in_order_wherever_the_bars_appear(self):
+        names = [name for name, _, _, _ in BAR.findall(self.html)]
+        order = ["PM2.5", "PM10", "Ozone", "SO2", "CO"]
+        self.assertEqual(len(names) % 5, 0)
+        for i in range(0, len(names), 5):
+            self.assertEqual(names[i:i + 5], order)
+
+    def test_only_the_dominant_pollutant_is_solid(self):
+        solid = {name for name, cls, _, _ in BAR.findall(self.html) if "emphasis-3" in cls}
+        self.assertEqual(solid, {"PM2.5"})
+
+    def test_solid_bar_follows_the_dominant_pollutant(self):
+        def so2_leads(o):
+            o["IDX_0"]["data"]["items"][0]["readings"]["so2_sub_index"]["central"] = 180
+        html = render("Central", mutate=so2_leads)
+        solid = {name for name, cls, _, _ in BAR.findall(html) if "emphasis-3" in cls}
+        self.assertEqual(solid, {"SO2"})
+
+
+@unittest.skipUnless(docker_available(), "docker not available")
+class TestBestAndWorstHour(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.html = render("Central")
+        cls.om = json.loads((ROOT / "fixtures" / "open-meteo.json").read_text())[0]["hourly"]
+
+    def test_best_and_worst_hour_come_from_the_forecast(self):
+        pm = self.om["pm2_5"]; times = self.om["time"]
+        def at(i):
+            hour = int(times[i][11:13])
+            return "%d%s" % (hour % 12 or 12, "am" if hour < 12 else "pm")
+        best_i = pm.index(min(pm)); worst_i = pm.index(max(pm))
+        self.assertIn("Best %s &middot; %d" % (at(best_i), round(pm[best_i])), self.html)
+        self.assertIn("Worst %s &middot; %d" % (at(worst_i), round(pm[worst_i])), self.html)
+
+
+@unittest.skipUnless(docker_available(), "docker not available")
+class TestRegionalStripCrowding(unittest.TestCase):
+    """The template estimates label widths; these are the arrangements that
+    put the most labels in the least room. On each side of the line, a
+    label must end before the next one starts, and stay on the strip."""
+
+    CASES = {
+        "all within 9 points": list(range(100, 110)),
+        "all identical": [120] * 10,
+        "three bunched at the worst end": [60, 180, 182, 184, 70, 75, 80, 85, 90, 95],
+        "eight bunched at the worst end": [20, 30, 298, 299, 300, 297, 296, 295, 294, 293],
+        "eight bunched at the clean end": [61, 60, 62, 63, 64, 65, 66, 67, 180, 300],
+    }
+
+    def test_labels_never_overlap_or_leave_the_strip(self):
+        for case, vals in self.CASES.items():
+            def crowd(o, vals=vals):
+                for city, v in zip(o["IDX_2"]["data"], vals):
+                    city["current"]["us_aqi"] = v
+            html = render("Central", mutate=crowd)
+            for size, n in STRIP_CITIES.items():
+                _, _, rows, char_w, char_bold = STRIPS[size]
+                width = float(STRIPS[size][0].split()[2])
+                strip = city_strip(html, size)
+                self.assertEqual(len(strip), n, "%s %s" % (case, size))
+                est = {name: len(name) * (char_bold if name == "Singapore" else char_w) for name in CITY_NAMES}
+                for side in rows:
+                    labels = [(x, x + est[name], name) for name, _, x, y, _ in strip if y == side]
+                    for left, right, name in labels:
+                        self.assertGreaterEqual(left, 0, "%s %s: %s starts off the strip" % (case, size, name))
+                        self.assertLessEqual(right, width + 0.5, "%s %s: %s runs off the strip" % (case, size, name))
+                    for (_, right, a), (left, _, b) in zip(labels, labels[1:]):
+                        self.assertLessEqual(right, left, "%s %s: %s runs into %s" % (case, size, a, b))
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,13 +1,16 @@
 {%- comment -%}
-  Left or right half of a side-by-side mashup: map on top, headline below.
-  Wherever the half is taller than it is wide -- the X (520x780, 390x1040
-  rotated) and the OG rotated (230x780) -- the regions and the forecast join
-  in. The OG half in landscape (390x440) has no room for them.
+  Left or right half of a side-by-side mashup.
+
+  Landscape: the map, then the headline with the pollutant bars beside it.
+  The X's half (520x780) also has room for the regions and the forecast.
+
+  Rotated: the slot is tall and narrow (230x780 on the OG, 390x1040 on the
+  X). The map stays on top, the headline takes a row, the bars follow, then
+  the per-region table and the forecast.
 
   Each section is a direct child of the one column, with its divider at its
-  top, so that on the X rotated -- where the content is shorter than the
-  1040px slot -- the column can fill the height and space the sections out
-  evenly (lg:portrait:h--full, lg:portrait:gap--distribute).
+  top, so that when rotated the column can fill the height and space the
+  sections out evenly (portrait:h--full, portrait:gap--distribute).
 {%- endcomment -%}
 
 <div class="layout layout--col">
@@ -16,43 +19,59 @@
       <span class="title title--small">No air quality data</span>
     </div>
   {%- else -%}
-    <div class="flex flex--col gap--small w--full lg:portrait:h--full lg:portrait:gap--distribute">
+    <div class="flex flex--col gap--small w--full portrait:h--full portrait:gap--distribute">
       <div class="w--full">{{ map_svg }}</div>
 
       <div class="flex flex--col flex--stretch-x gap--small w--full">
-      <div class="border--h-5"></div>
-      <div class="item">
-        <div class="content">
-          <span class="label label--small lg:label--base">{{ scale_name }} &middot; {{ home_label }}</span>
-          <span class="value value--xxlarge lg:value--xxxlarge value--tnums">{{ home_value }}</span>
-          <span class="title title--small lg:title--base">{{ home_band_label }}</span>
-          <span class="description lg:description--large">{{ dom_name }} leading &middot; PM2.5 {{ home_pm25 }}</span>
+        <div class="border--h-5"></div>
+        {%- comment -%}
+          Landscape: the bars sit beside the headline, where there is width
+          but no height to spare. Rotated, the headline takes the row and
+          the bars follow it.
+        {%- endcomment -%}
+        <div class="grid grid--cols-12">
+          <div class="col--span-7 portrait:col--span-12">
+            <div class="item">
+              <div class="content">
+                <span class="label label--small lg:label--base">{{ scale_name }} &middot; {{ home_label }}</span>
+                <span class="value value--xxlarge lg:value--xxxlarge value--tnums">{{ home_value }}</span>
+                <span class="title title--small lg:title--base">{{ home_band_label }}</span>
+                <span class="description lg:description--large">{{ dom_name }} leading &middot; PM2.5 {{ home_pm25 }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="col--span-5 portrait:hidden flex--col flex--stretch-x flex--center-y">
+            {{ pollutant_bars }}
+          </div>
         </div>
       </div>
+
+      <div class="hidden portrait:block w--full">
+        <div class="border--h-5"></div>
+        <div class="lg:hidden">{{ pollutant_bars }}</div>
+        <div class="hidden lg:block">{{ pollutant_bars_inline }}</div>
       </div>
 
       <div class="hidden lg:block portrait:block w--full">
         <div class="border--h-5"></div>
-        <div class="lg:portrait:hidden">{{ region_row }}</div>
+        <div class="portrait:hidden">{{ region_row }}</div>
 
-        {%- comment -%}
-          The X rotated is 1040px tall: room for the full per-region table
-          from the full view in place of the row above.
-        {%- endcomment -%}
-        <div class="hidden lg:portrait:block">
-          <div class="grid grid--cols-4">
-            <span class="label label--small lg:label--base">Region</span>
+        {%- comment -%} Rotated: the per-region table in place of the row above. {%- endcomment -%}
+        <div class="hidden portrait:block">
+          {%- comment -%} Five columns, the name taking two: "Central" does not fit a quarter of the OG's 205px. {%- endcomment -%}
+          <div class="grid grid--cols-5">
+            <span class="label label--small lg:label--base col--span-2">Region</span>
             <span class="label label--small lg:label--base">{{ scale_short }}</span>
             <span class="label label--small lg:label--base">PM2.5</span>
             <span class="label label--small lg:label--base">PM10</span>
           </div>
           {%- for layer in map_layers -%}
             {%- assign rname = layer | split: '|' | first -%}
-            <div class="grid grid--cols-4">
-              <span class="title title--small lg:title--base">{{ rname | capitalize }}</span>
-              <span class="value value--xsmall lg:value--small value--tnums">{{ region_values[forloop.index0] }}</span>
-              <span class="value value--xsmall lg:value--small value--tnums">{{ readings.pm25_twenty_four_hourly[rname] }}</span>
-              <span class="value value--xsmall lg:value--small value--tnums">{{ readings.pm10_twenty_four_hourly[rname] }}</span>
+            <div class="grid grid--cols-5">
+              <span class="title title--small lg:title--base col--span-2">{{ rname | capitalize }}</span>
+              <span class="value value--xxsmall lg:value--small value--tnums">{{ region_values[forloop.index0] }}</span>
+              <span class="value value--xxsmall lg:value--small value--tnums">{{ readings.pm25_twenty_four_hourly[rname] }}</span>
+              <span class="value value--xxsmall lg:value--small value--tnums">{{ readings.pm10_twenty_four_hourly[rname] }}</span>
             </div>
           {%- endfor -%}
         </div>
@@ -61,23 +80,12 @@
 
       <div class="hidden lg:block portrait:block w--full">
         <div class="border--h-5"></div>
-        {{ fc_block_lg }}
-      </div>
-
-      {%- comment -%} Still height to spare on the X rotated: the neighbouring capitals. {%- endcomment -%}
-      <div class="hidden lg:portrait:block w--full">
-          <div class="border--h-5"></div>
-          <span class="label label--small lg:label--base">Regional &middot; {{ scale_city_note }}</span>
-          <div class="grid grid--cols-3">
-            {%- for city in om_cities -%}
-              <div class="item item--shrink">
-                <div class="content">
-                  <span class="label label--small lg:label--base">{{ city_names[forloop.index0] }}</span>
-                  <span class="value value--small value--tnums">{{ city_values[forloop.index0] }}</span>
-                </div>
-              </div>
-            {%- endfor -%}
-          </div>
+        {%- comment -%}
+          The X's landscape half is full to the pixel with the stacked bars
+          beside the headline, so the chart gives up a few px of height
+          there. Same shared block, with a height class added to its line.
+        {%- endcomment -%}
+        {{ fc_block | replace: 'class="block grow"', 'class="block grow lg:h--[72px] lg:portrait:h--[60px]"' }}
       </div>
     </div>
   {%- endif -%}

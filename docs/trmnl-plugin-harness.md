@@ -208,6 +208,22 @@ Passing tests are not evidence on their own.
   to forget: `lg:portrait:` classes do not reach it, and at 480px wide a
   three-across row that fits the X clips. Several bugs above are invisible in a passing test
   suite and obvious in a screenshot.
+- **Check widths in Chrome, not only in the PNGs.** `trmnlp build --png`
+  renders with Firefox; the preview (and anyone looking at the markup in a
+  browser) is Chrome, where the same digits set about 5% wider: "163" at
+  `value--xxlarge` is 176px in the PNG and 186px in Chrome. A column sized to
+  the PNG clips the number in Chrome, because the framework's `.content`
+  wrapper is `overflow: hidden`. Do not size a column to a number; let the
+  number take its own width (a flex row) and give the rest to its neighbour.
+- **Wait for the web font before measuring.** Inter is loaded from Google
+  Fonts; a headless Chrome that measures on load (or `--dump-dom` with a
+  short virtual-time budget) measures a narrower fallback, so every width
+  comes out small and clipping goes unreported. Run the measurement inside
+  `document.fonts.ready`, and fail the run if
+  `document.fonts.check('16px "Inter Variable"')` is false.
+- **Measure clipping against the ancestor that clips**, not the layout: any
+  ancestor with `overflow` other than `visible`. And measure with three-digit
+  readings; the committed fixtures only have two.
 - **Prove each test bites.** Re-introduce the bug it covers, confirm it fails,
   restore, confirm it passes. A test that has never failed has proven nothing.
 - **Say which checks ran where.** The root-ownership bug above passes on macOS

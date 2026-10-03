@@ -4,7 +4,7 @@ A Singapore air quality tracker for [TRMNL](https://trmnl.com).
 
 A halftone map of all five NEA reporting regions, the headline reading for
 your region with the pollutant driving it, a 24-hour PM2.5 forecast, and how
-the neighbouring capitals compare — on one e-ink screen, sized to whichever
+the neighbouring cities compare — on one e-ink screen, sized to whichever
 TRMNL panel it lands on. Readable as US AQI, NEA PSI or raw PM2.5.
 
 ![Full screen on TRMNL OG](docs/screenshot-full.png)
@@ -116,11 +116,13 @@ has no shared file.
 
 **Scale** — which index the screen speaks in. Defaults to **US AQI**.
 
-| Choice | Singapore regions | Regional cities |
+| Choice | Singapore regions | Regional strip |
 |---|---|---|
-| US AQI | aqicn.org, or derived from NEA's hourly PM2.5 without a token | Open-Meteo's `us_aqi` |
-| NEA PSI | NEA's published PSI | derived from modelled PM2.5 |
-| PM2.5 | NEA's 24-hour average, µg/m³ | Open-Meteo's PM2.5, µg/m³ |
+| US AQI | aqicn.org, or derived from NEA's hourly PM2.5 without a token | placed by Open-Meteo's `us_aqi` |
+| NEA PSI | NEA's published PSI | placed by modelled PM2.5 on the PSI scale |
+| PM2.5 | NEA's 24-hour average, µg/m³ | placed by Open-Meteo's PM2.5 |
+
+The regional strip places cities along a line by Open-Meteo's own figure for each, cleanest at the left end and worst at the right, with the gaps between them to scale. The OG shows Singapore, Kuala Lumpur, Jakarta, Bangkok and Manila; the TRMNL X adds Johor Bahru next door and the haze sources: Pekanbaru and Palembang in Sumatra, Pontianak and Kuching in Borneo. All ten come from the one Open-Meteo request. The strip prints no numbers: the headline is a measured reading and the strip is modelled, so a number for Singapore there would contradict it. Singapore stays on the model like the others, with or without a token, so the comparison is like for like, and the strip is labelled "modelled".
 
 No free source publishes an AQI per Singapore *region* — Open-Meteo's model
 runs on a ~11 km grid that cannot tell one part of the island from another —
@@ -258,10 +260,12 @@ once you have adapted the templates.
 
 | Layout | Shows |
 |---|---|
-| `full` | map, legend, regional cities, headline, pollutants, forecast |
-| `half_vertical` | map and headline; on the X, type a size up plus all five regions and the forecast, and the neighbouring capitals when rotated |
-| `half_horizontal` | headline, all five regions, forecast; on the X, type a size up plus the advice, and the pollutant readings when rotated |
-| `quadrant` | headline and band; on the X, also the advice and all five regions, and the pollutant readings when rotated |
+| `full` | map, legend, regional strip, headline, pollutant bars, forecast; on the X, also the per-region table (the scale, then every pollutant's PSI sub-index) and the best/worst hour |
+| `half_vertical` | map, headline and pollutant bars; on the X, also all five regions and the forecast. Rotated: map, headline, bars, the per-region table and the forecast |
+| `half_horizontal` | headline, pollutant bars, all five regions, forecast; on the X, the regions become a table with PM2.5, PM10 and ozone sub-indices, plus the advice, the best/worst hour and the regional strip |
+| `quadrant` | headline, band and pollutant bars; on the X, also the advice and all five regions |
+
+The pollutant bars show each pollutant NEA scores (PM2.5, PM10, ozone, SO2, CO) as its PSI sub-index for the home region. The solid bar is the one driving the PSI. The same five appear on every layout: normally with each name on its own line above its bar, and with the name beside the bar in the three slots that have no height to spare (OG full landscape, and the X's rotated half-vertical and quadrant).
 
 ![Half vertical](docs/screenshot-half_vertical.png)
 

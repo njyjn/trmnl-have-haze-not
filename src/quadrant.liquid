@@ -1,27 +1,31 @@
 {%- comment -%}
-  One quarter of a 2x2 mashup. On the OG that is the number and its band.
-  The X's quarter (520x390, or 390x520 rotated) has room the OG's does not:
-  the advice and all five regions join in there (lg:), and the pollutant
-  readings as well when it is rotated (lg:portrait:).
+  One quarter of a 2x2 mashup: the number, its band, and the pollutant bars.
+  In landscape the bars sit beside the number; rotated, they go under it.
+  The X's quarter has more room than the OG's: the advice and all five
+  regions join in there (lg:).
 {%- endcomment -%}
 
 <div class="layout layout--col layout--center">
   {%- if has_psi == false -%}
     <span class="title title--small">No data</span>
   {%- else -%}
-    <span class="label label--small lg:label--base">{{ scale_short }} &middot; {{ home_label }}</span>
-    <span class="value value--xxxlarge portrait:value--xxlarge lg:portrait:value--xxxlarge value--tnums">{{ home_value }}</span>
-    <span class="title title--small lg:title--base">{{ home_band_label }}</span>
-    <div class="hidden lg:block">
-      <span class="description lg:description--large">{{ home_band_advice }}</span>
+    <div class="grid grid--cols-12 w--full">
+      <div class="col--span-7 portrait:col--span-12 flex--col flex--center">
+        <span class="label label--small lg:label--base">{{ scale_short }} &middot; {{ home_label }}</span>
+        <span class="value value--xxlarge lg:value--xxxlarge value--tnums">{{ home_value }}</span>
+        <span class="title title--small lg:title--base">{{ home_band_label }}</span>
+        <div class="hidden lg:block">
+          <span class="description lg:description--large">{{ home_band_advice }}</span>
+        </div>
+      </div>
+      <div class="col--span-5 portrait:col--span-12 flex--col flex--stretch-x flex--center-y">
+        <div class="lg:portrait:hidden">{{ pollutant_bars }}</div>
+        <div class="hidden lg:portrait:block">{{ pollutant_bars_inline }}</div>
+      </div>
     </div>
     <div class="hidden lg:block w--full">
       <div class="border--h-5"></div>
       {{ region_row }}
-    </div>
-    <div class="hidden lg:portrait:block w--full">
-      <div class="border--h-5"></div>
-      {{ pollutant_block_lg }}
     </div>
   {%- endif -%}
 </div>

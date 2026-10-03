@@ -109,7 +109,6 @@
 {%- when 'psi' -%}
   {%- assign scale_name = 'PSI 24h' -%}
   {%- assign scale_short = 'PSI' -%}
-  {%- assign scale_city_note = 'PSI scale &middot; derived from PM2.5' -%}
   {%- assign band_edges = '50,100,200,300' | split: ',' -%}
   {%- assign band_labels = 'Good,Moderate,Unhealthy,Very Unhealthy,Hazardous' | split: ',' -%}
   {%- assign band_short = 'Good,Moderate,Unhealthy,V. unhealthy,Hazardous' | split: ',' -%}
@@ -117,7 +116,6 @@
 {%- when 'pm25' -%}
   {%- assign scale_name = 'PM2.5 24h' -%}
   {%- assign scale_short = 'PM2.5' -%}
-  {%- assign scale_city_note = '&micro;g/m&sup3; now' -%}
   {%- assign band_edges = '12,55,150,250' | split: ',' -%}
   {%- assign band_labels = 'Good,Moderate,Unhealthy,Very Unhealthy,Hazardous' | split: ',' -%}
   {%- assign band_short = 'Good,Moderate,Unhealthy,V. unhealthy,Hazardous' | split: ',' -%}
@@ -125,7 +123,6 @@
 {%- else -%}
   {%- assign scale_name = 'US AQI now' -%}
   {%- assign scale_short = 'AQI' -%}
-  {%- assign scale_city_note = 'US AQI now' -%}
   {%- assign band_edges = '50,100,150,200,300' | split: ',' -%}
   {%- assign band_labels = 'Good,Moderate,Unhealthy for Sensitive,Unhealthy,Very Unhealthy,Hazardous' | split: ',' -%}
   {%- assign band_short = 'Good,Moderate,Sensitive,Unhealthy,V. unhealthy,Hazardous' | split: ',' -%}
@@ -319,6 +316,20 @@
     {%- assign spark_points = spark_points | append: sx | append: ',' | append: sy | append: ' ' -%}
   {%- endfor -%}
 
+  {%- comment -%}
+    The cleanest and the worst hour ahead, for the X's "when to go out"
+    line. Open-Meteo can send null for an hour; `nil < n` is false in
+    Liquid, so a gap is skipped rather than winning either comparison.
+  {%- endcomment -%}
+  {%- assign fc_best = fc_now -%}{%- assign fc_best_i = 0 -%}
+  {%- assign fc_worst = fc_now -%}{%- assign fc_worst_i = 0 -%}
+  {%- for v in fc -%}
+    {%- if v < fc_best -%}{%- assign fc_best = v -%}{%- assign fc_best_i = forloop.index0 -%}{%- endif -%}
+    {%- if v > fc_worst -%}{%- assign fc_worst = v -%}{%- assign fc_worst_i = forloop.index0 -%}{%- endif -%}
+  {%- endfor -%}
+  {%- assign fc_best_at = fc_times[fc_best_i] | date: '%-l%P' -%}
+  {%- assign fc_worst_at = fc_times[fc_worst_i] | date: '%-l%P' -%}
+
   {%- assign fc_trend = 'steady' -%}
   {%- assign fc_delta = fc_end | minus: fc_now -%}
   {%- if fc_delta > 3 -%}{%- assign fc_trend = 'rising' -%}
@@ -344,7 +355,12 @@
   Singapore must stay first -- it is also where the forecast is read from.
   See README "Changing the comparison cities".
 {%- endcomment -%}
-{%- assign city_names = 'Singapore,Kuala Lumpur,Jakarta,Bangkok,Manila' | split: ',' -%}
+{%- comment -%}
+  The first five are on every screen. The X's strip adds the last five:
+  Johor Bahru next door, and the Sumatran and Bornean cities where
+  Singapore's haze comes from, so the line shows it building at source.
+{%- endcomment -%}
+{%- assign city_names = 'Singapore,Kuala Lumpur,Jakarta,Bangkok,Manila,Johor Bahru,Pekanbaru,Palembang,Pontianak,Kuching' | split: ',' -%}
 {%- assign om_cities = om -%}
 {%- assign city_values = '' -%}
 {%- for city in om_cities -%}
@@ -372,11 +388,171 @@
   {%- else -%}
     {%- unless city.current.pm2_5 -%}{%- assign cv = '–' -%}{%- endunless -%}
   {%- endif -%}
-  {%- comment -%} Singapore is index 0; with a token, use the measured home-region value. {%- endcomment -%}
-  {%- if forloop.first and scale_key == 'aqi' and has_waqi -%}{%- assign cv = home_value -%}{%- endif -%}
+  {%- comment -%}
+    Singapore (index 0) stays on the model like the other four, token or
+    not. The row is a like-for-like comparison between cities, and a
+    measured Singapore beside modelled neighbours is not one. It will often
+    read lower than the headline -- a regional model smooths local haze --
+    which is why the row is labelled as modelled.
+  {%- endcomment -%}
   {%- assign city_values = city_values | append: cv | append: ',' -%}
 {%- endfor -%}
 {%- assign city_values = city_values | split: ',' -%}
+
+{%- comment -%}
+  The regional strip: cities placed along a line by the model's own figure,
+  cleanest at the left end and worst at the right, so the gaps between them
+  are to scale. No numbers are printed. The headline is a measured reading
+  and these are modelled, so a number for Singapore here would contradict
+  it; a position does the comparing without that.
+
+  Drawn at the width each will be shown at so the type matches the text
+  around it:
+    OG          the first five cities, 430 units wide
+    X           all ten, 680 units wide (the X's landscape column, ~673px)
+    X rotated   all ten, 760 units wide (the X's rotated width)
+    X wide      all ten, 1000 units wide (the X's landscape half, full width)
+
+  Labels alternate above and below the line in rank order. Labels that
+  would still run into each other on one side are moved apart in two passes
+  -- left to right, then right to left -- and a thin leader joins any label
+  that has moved off its dot. Each side holds half the names, which is well
+  under the strip's width at either size, so the passes always find room.
+  Widths are estimated from the character count, on the generous side
+  (Chrome sets Inter ~5% wider than the Firefox renderer); the template
+  cannot measure text.
+
+  Sorting: Liquid sorts strings, so each value is offset to a fixed width
+  ("100080|Singapore") and the offset is taken off again when read back.
+{%- endcomment -%}
+{%- for size in (1..4) -%}
+  {%- if size == 1 -%}
+    {%- assign strip_w = 430 -%}{%- assign strip_h = 46 -%}{%- assign strip_n = 5 -%}
+    {%- assign strip_font = 11 -%}{%- assign char_w = 6.6 -%}{%- assign char_w_bold = 7.3 -%}
+    {%- assign line_y = 24 -%}{%- assign above_y = 14 -%}{%- assign below_y = 42 -%}
+  {%- else -%}
+    {%- assign strip_n = 10 -%}
+    {%- assign strip_font = 14 -%}{%- assign char_w = 8.6 -%}{%- assign char_w_bold = 9.5 -%}
+    {%- if size == 2 or size == 4 -%}
+      {%- if size == 2 -%}{%- assign strip_w = 680 -%}{%- else -%}{%- assign strip_w = 1000 -%}{%- endif -%}
+      {%- assign strip_h = 56 -%}
+      {%- assign line_y = 28 -%}{%- assign above_y = 15 -%}{%- assign below_y = 52 -%}
+    {%- else -%}
+      {%- comment -%} Rotated, the full view has no height to spare: the rows sit a little closer to the line. {%- endcomment -%}
+      {%- assign strip_w = 760 -%}{%- assign strip_h = 52 -%}
+      {%- assign line_y = 26 -%}{%- assign above_y = 14 -%}{%- assign below_y = 49 -%}
+    {%- endif -%}
+  {%- endif -%}
+  {%- assign strip_pad = 6 -%}
+  {%- assign strip_plot_w = strip_w | minus: strip_pad | minus: strip_pad -%}
+  {%- assign strip_items = '' -%}
+  {%- for cname in city_names limit: strip_n -%}
+    {%- assign cv = city_values[forloop.index0] -%}
+    {%- if cv and cv != '' and cv != '–' -%}
+      {%- assign skey = cv | plus: 100000 | round -%}
+      {%- assign strip_items = strip_items | append: skey | append: '|' | append: cname | append: ';;' -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- assign strip_sorted = strip_items | split: ';;' | sort -%}
+  {%- assign strip_min = strip_sorted | first | split: '|' | first | minus: 100000 -%}
+  {%- assign strip_max = strip_sorted | last | split: '|' | first | minus: 100000 -%}
+  {%- assign strip_span = strip_max | minus: strip_min -%}
+  {%- if strip_span < 1 -%}{%- assign strip_span = 1 -%}{%- endif -%}
+
+  {%- comment -%} Pass 1, left to right: centre on the dot, push right past the previous label, keep inside the strip. {%- endcomment -%}
+  {%- assign last_above = -100 -%}
+  {%- assign last_below = -100 -%}
+  {%- assign strip_xs = '' -%}
+  {%- assign strip_lefts = '' -%}
+  {%- assign strip_widths = '' -%}
+  {%- for entry in strip_sorted -%}
+    {%- assign eparts = entry | split: '|' -%}
+    {%- assign ev = eparts[0] | minus: 100000 -%}
+    {%- assign ename = eparts[1] -%}
+    {%- assign ex = ev | minus: strip_min | times: strip_plot_w | times: 1.0 | divided_by: strip_span | plus: strip_pad | round: 1 -%}
+    {%- if ename == 'Singapore' -%}{%- assign ew = ename.size | times: char_w_bold -%}{%- else -%}{%- assign ew = ename.size | times: char_w -%}{%- endif -%}
+    {%- assign left = ew | divided_by: 2.0 -%}
+    {%- assign left = ex | minus: left -%}
+    {%- assign side = forloop.index0 | modulo: 2 -%}
+    {%- if side == 0 -%}{%- assign prev = last_above -%}{%- else -%}{%- assign prev = last_below -%}{%- endif -%}
+    {%- assign min_left = prev | plus: 8 -%}
+    {%- if left < min_left -%}{%- assign left = min_left -%}{%- endif -%}
+    {%- assign max_left = strip_w | minus: 2 | minus: ew -%}
+    {%- if left > max_left -%}{%- assign left = max_left -%}{%- endif -%}
+    {%- if left < 0 -%}{%- assign left = 0 -%}{%- endif -%}
+    {%- assign right = left | plus: ew -%}
+    {%- if side == 0 -%}{%- assign last_above = right -%}{%- else -%}{%- assign last_below = right -%}{%- endif -%}
+    {%- assign strip_xs = strip_xs | append: ex | append: ',' -%}
+    {%- assign strip_lefts = strip_lefts | append: left | append: ',' -%}
+    {%- assign strip_widths = strip_widths | append: ew | append: ',' -%}
+  {%- endfor -%}
+  {%- assign strip_xs = strip_xs | split: ',' -%}
+  {%- assign strip_lefts = strip_lefts | split: ',' -%}
+  {%- assign strip_widths = strip_widths | split: ',' -%}
+
+  {%- comment -%} Pass 2, right to left: what pass 1 pulled back in at the right end may now sit on its neighbour, so move earlier labels left. Built back to front, hence the prepend. {%- endcomment -%}
+  {%- assign next_above = strip_w | plus: 6 -%}
+  {%- assign next_below = strip_w | plus: 6 -%}
+  {%- assign strip_final = '' -%}
+  {%- assign strip_last = strip_sorted.size | minus: 1 -%}
+  {%- for i in (0..strip_last) reversed -%}
+    {%- assign left = strip_lefts[i] | plus: 0 -%}
+    {%- assign ew = strip_widths[i] | plus: 0 -%}
+    {%- assign side = i | modulo: 2 -%}
+    {%- if side == 0 -%}{%- assign nxt = next_above -%}{%- else -%}{%- assign nxt = next_below -%}{%- endif -%}
+    {%- assign max_left = nxt | minus: 8 | minus: ew -%}
+    {%- if left > max_left -%}{%- assign left = max_left -%}{%- endif -%}
+    {%- if left < 0 -%}{%- assign left = 0 -%}{%- endif -%}
+    {%- if side == 0 -%}{%- assign next_above = left -%}{%- else -%}{%- assign next_below = left -%}{%- endif -%}
+    {%- assign strip_final = left | round: 1 | append: ',' | append: strip_final -%}
+  {%- endfor -%}
+  {%- assign strip_final = strip_final | split: ',' -%}
+
+  {%- capture strip_svg -%}
+    {%- if strip_sorted.size > 1 -%}
+      <svg class="block" viewBox="0 0 {{ strip_w }} {{ strip_h }}" width="100%" font-family="Inter Variable, Inter, sans-serif" font-size="{{ strip_font }}" fill="currentColor">
+        <line x1="{{ strip_pad }}" y1="{{ line_y }}" x2="{{ strip_w | minus: strip_pad }}" y2="{{ line_y }}" stroke="currentColor" stroke-width="1"/>
+        {%- for entry in strip_sorted -%}
+          {%- assign ename = entry | split: '|' | last -%}
+          {%- assign i = forloop.index0 -%}
+          {%- assign dx = strip_xs[i] | plus: 0 -%}
+          {%- assign lx = strip_final[i] | plus: 0 -%}
+          {%- assign lmid = strip_widths[i] | plus: 0 | divided_by: 2.0 | plus: lx -%}
+          {%- assign off = lmid | minus: dx | abs -%}
+          {%- assign side = i | modulo: 2 -%}
+          {%- if side == 0 -%}
+            {%- assign ty = above_y -%}{%- assign lead_y = above_y | plus: 3 -%}
+          {%- else -%}
+            {%- assign ty = below_y -%}{%- assign lead_y = below_y | minus: strip_font | minus: 1 -%}
+          {%- endif -%}
+          {%- if off > 6 -%}
+            <line x1="{{ dx }}" y1="{{ line_y }}" x2="{{ lmid | round: 1 }}" y2="{{ lead_y }}" stroke="currentColor" stroke-width="0.75"/>
+          {%- endif -%}
+          {%- if ename == 'Singapore' -%}
+            <circle cx="{{ dx }}" cy="{{ line_y }}" r="{{ strip_font | divided_by: 2 }}"/>
+            <text x="{{ lx }}" y="{{ ty }}" font-weight="700">{{ ename }}</text>
+          {%- else -%}
+            <circle cx="{{ dx }}" cy="{{ line_y }}" r="{{ strip_font | divided_by: 3.5 | round: 1 }}"/>
+            <text x="{{ lx }}" y="{{ ty }}" font-weight="500">{{ ename }}</text>
+          {%- endif -%}
+        {%- endfor -%}
+      </svg>
+    {%- endif -%}
+  {%- endcapture -%}
+  {%- case size -%}{%- when 1 -%}{%- assign city_strip_og = strip_svg -%}{%- when 2 -%}{%- assign city_strip_x = strip_svg -%}{%- when 3 -%}{%- assign city_strip_xp = strip_svg -%}{%- else -%}{%- assign city_strip_xw = strip_svg -%}{%- endcase -%}
+{%- endfor -%}
+{%- capture city_strip -%}
+  <span class="label label--small lg:label--base">Regional &middot; modelled &middot; cleaner at left, worse at right</span>
+  <div class="lg:hidden">{{ city_strip_og }}</div>
+  <div class="hidden lg:block lg:portrait:hidden">{{ city_strip_x }}</div>
+  <div class="hidden lg:portrait:block">{{ city_strip_xp }}</div>
+{%- endcapture -%}
+{%- comment -%} The same, for a row the X's full landscape width (half_horizontal). {%- endcomment -%}
+{%- capture city_strip_wide -%}
+  <span class="label label--small lg:label--base">Regional &middot; modelled &middot; cleaner at left, worse at right</span>
+  <div class="hidden lg:block lg:portrait:hidden">{{ city_strip_xw }}</div>
+  <div class="hidden lg:portrait:block">{{ city_strip_xp }}</div>
+{%- endcapture -%}
 
 {%- comment -%}
   The map is captured once here rather than repeated in full.liquid and
@@ -458,10 +634,16 @@
   above it in portrait) without repeating it. Captures render nothing until
   a layout outputs them.
 {%- endcomment -%}
+{%- comment -%}
+  These blocks step their type up a size on the X (lg:), following the X
+  guide: --base resets on labels and the band, and the headline goes from
+  xxxlarge to mega. The sparkline carries `grow` so that inside a flex
+  column it takes the height on offer; in a plain block it keeps its shape.
+{%- endcomment -%}
 {%- capture fc_block -%}
   {%- if has_forecast -%}
-    <span class="label label--small">PM2.5 next 24h &middot; {{ fc_trend }}</span>
-    <svg class="block" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
+    <span class="label label--small lg:label--base">PM2.5 next 24h &middot; {{ fc_trend }}</span>
+    <svg class="block grow" viewBox="0 0 {{ spark_w }} {{ spark_h }}" width="100%" preserveAspectRatio="none">
       {%- comment -%} NEA calls 1h PM2.5 above 55 elevated; show it when it is in range. {%- endcomment -%}
       {%- if fc_min < 55 and fc_max > 55 -%}
         {%- assign rule_y = 55 | minus: fc_min | times: spark_plot_h | times: 1.0 | divided_by: fc_span | plus: spark_pad -%}
@@ -470,58 +652,92 @@
       {%- endif -%}
       <polyline fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ spark_points }}"/>
     </svg>
-    <div class="flex flex--between">
-      <span class="label label--small label--gray 1bit:text--black">now {{ fc_now | round }}</span>
-      <span class="label label--small label--gray 1bit:text--black">peak {{ fc_max | round }}</span>
-      <span class="label label--small label--gray 1bit:text--black">{{ fc_times | last | date: '%-l%P' }} {{ fc_end | round }}</span>
+    <div class="lg:hidden">
+      <div class="flex flex--between">
+        <span class="label label--small label--gray 1bit:text--black">now {{ fc_now | round }}</span>
+        <span class="label label--small label--gray 1bit:text--black">peak {{ fc_max | round }}</span>
+        <span class="label label--small label--gray 1bit:text--black">{{ fc_times | last | date: '%-l%P' }} {{ fc_end | round }}</span>
+      </div>
+    </div>
+    {%- comment -%} X only: when the air is cleanest and worst over the next day. {%- endcomment -%}
+    <div class="hidden lg:block">
+      <div class="flex flex--between">
+        <span class="label label--base label--gray 1bit:text--black">Best {{ fc_best_at }} &middot; {{ fc_best | round }}</span>
+        <span class="label label--base label--gray 1bit:text--black">Worst {{ fc_worst_at }} &middot; {{ fc_worst | round }}</span>
+      </div>
     </div>
   {%- else -%}
-    <span class="label label--small label--gray 1bit:text--black">Forecast unavailable</span>
+    <span class="label label--small lg:label--base label--gray 1bit:text--black">Forecast unavailable</span>
   {%- endif -%}
 {%- endcapture -%}
 
 {%- capture headline_block -%}
   <div class="item">
     <div class="content">
-      <span class="label label--small">{{ scale_name }} &middot; {{ home_label }}</span>
-      <span class="value value--xxxlarge portrait:value--xxlarge lg:portrait:value--xxxlarge value--tnums">{{ home_value }}</span>
-      <span class="title title--small">{{ home_band_label }}</span>
-      <span class="description description--base">{{ home_band_advice }}</span>
+      <span class="label label--small lg:label--base">{{ scale_name }} &middot; {{ home_label }}</span>
+      <span class="value value--xxxlarge lg:value--mega portrait:value--xxlarge lg:portrait:value--xxxlarge value--tnums">{{ home_value }}</span>
+      <span class="title title--small lg:title--base">{{ home_band_label }}</span>
+      <span class="description description--base lg:description--large">{{ home_band_advice }}</span>
     </div>
   </div>
 {%- endcapture -%}
 
-{%- capture pollutant_block -%}
-  <div class="grid grid--cols-3 gap--small">
-    <div class="item item--shrink">
-      <div class="content">
-        <span class="label label--small">Dominant</span>
-        <span class="value value--small portrait:value--xsmall lg:portrait:value--small">{{ dom_name }}</span>
-      </div>
-    </div>
-    <div class="item item--shrink">
-      <div class="content">
-        <span class="label label--small">PM2.5</span>
-        <span class="value value--small portrait:value--xsmall lg:portrait:value--small value--tnums">{{ home_pm25 }}</span>
-      </div>
-    </div>
-    <div class="item item--shrink">
-      <div class="content">
-        <span class="label label--small">PM10</span>
-        <span class="value value--small portrait:value--xsmall lg:portrait:value--small value--tnums">{{ home_pm10 }}</span>
-      </div>
-    </div>
-  </div>
-  <span class="label label--small label--gray 1bit:text--black">24-hour average, &micro;g/m&sup3;</span>
-{%- endcapture -%}
 
 {%- comment -%}
-  The mashup slots step their type up a size on the X; the full view is
-  already sized for it and keeps the blocks as they are. Same markup, with
-  the framework's lg: size added to each label.
+  The pollutant bars: each pollutant NEA scores, as its PSI sub-index for
+  the home region. PSI is the highest of these, so the longest bar is the one
+  driving the reading; it is drawn solid. A full bar is a sub-index of 200,
+  where "very unhealthy" begins. NO2 is measured but is not part of PSI, so
+  it has no sub-index and no bar.
+
+  Always the same five. Two ways of setting them, and the slot decides:
+    pollutant_bars         name on its own line, bar and value under it.
+                           The default: it uses the height most slots have.
+    pollutant_bars_inline  name, bar and value on one line, for the few
+                           slots with no height to spare.
+  The value has a fixed width, wide enough for three digits (a sub-index
+  passes 100 in any haze), so every bar ends on the same line; inline,
+  the name has one too so they all start on the same line.
 {%- endcomment -%}
-{%- assign fc_block_lg = fc_block | replace: 'class="label label--small', 'class="label label--small lg:label--base' -%}
-{%- assign pollutant_block_lg = pollutant_block | replace: 'class="label label--small', 'class="label label--small lg:label--base' -%}
+{%- assign bar_names = 'PM2.5,PM10,Ozone,SO2,CO' | split: ',' -%}
+{%- assign bar_keys = 'pm25_sub_index,pm10_sub_index,o3_sub_index,so2_sub_index,co_sub_index' | split: ',' -%}
+{%- assign bar_rows = '' -%}
+{%- assign bar_rows_inline = '' -%}
+{%- for bname in bar_names -%}
+  {%- assign bkey = bar_keys[forloop.index0] -%}
+  {%- assign sub = readings[bkey][home_region] -%}
+  {%- assign bar_w = sub | default: 0 | times: 100 | divided_by: 200 -%}
+  {%- if bar_w > 100 -%}{%- assign bar_w = 100 -%}{%- endif -%}
+  {%- capture bar_track -%}
+      <div class="progress-bar progress-bar--small grow{% if bname == dom_name %} progress-bar--emphasis-3{% endif %}">
+        <div class="track">
+          <div class="fill" style="width: {{ bar_w }}%"></div>
+        </div>
+      </div>
+      <span class="value value--xxsmall value--tnums w--[32px] lg:w--[40px] text--right">{{ sub | default: '–' }}</span>
+  {%- endcapture -%}
+  {%- capture bar_row -%}
+    <div>
+      <span class="label label--small lg:label--base">{{ bname }}</span>
+      <div class="flex flex--row flex--center-y gap--small">{{ bar_track }}</div>
+    </div>
+  {%- endcapture -%}
+  {%- capture bar_row_inline -%}
+    <div class="flex flex--row flex--center-y gap--small">
+      <span class="label label--small lg:label--base w--[44px] lg:w--[56px]">{{ bname }}</span>{{ bar_track }}
+    </div>
+  {%- endcapture -%}
+  {%- assign bar_rows = bar_rows | append: bar_row -%}
+  {%- assign bar_rows_inline = bar_rows_inline | append: bar_row_inline -%}
+{%- endfor -%}
+{%- capture pollutant_bars -%}
+  <span class="label label--small lg:label--base">Pollutants &middot; PSI sub-index</span>
+  {{ bar_rows }}
+{%- endcapture -%}
+{%- capture pollutant_bars_inline -%}
+  <span class="label label--small lg:label--base">Pollutants &middot; PSI sub-index</span>
+  {{ bar_rows_inline }}
+{%- endcapture -%}
 
 {%- comment -%}
   All five regions on one line, for the mashup views. Three across on the OG

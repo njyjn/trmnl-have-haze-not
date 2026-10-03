@@ -29,6 +29,10 @@ READING_KEYS = (
     "o3_sub_index",
     "so2_sub_index",
     "co_sub_index",
+    # the X's per-region table
+    "o3_eight_hour_max",
+    "so2_twenty_four_hourly",
+    "co_eight_hour_max",
 )
 
 
